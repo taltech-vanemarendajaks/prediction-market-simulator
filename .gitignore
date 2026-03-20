@@ -1,0 +1,47 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.*
+
+# ========================
+# FRONTEND (Node / React)
+# ========================
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+
+# ========================
+# BACKEND (Java / Maven)
+# ========================
+backend/target/
+backend/*.log
+
+# Maven wrapper (hoia wrapper, ära ignore seda)
+# !backend/mvnw
+# !backend/mvnw.cmd
+# !backend/.mvn/
+
+# ========================
+# Build / temp
+# ========================
+*.tmp
+*.swp
+*.swo
+
+# ========================
+# Misc
+# ========================
+coverage/
