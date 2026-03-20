@@ -1,3 +1,11 @@
+---
+name: Task
+about: Create a task
+title: ""
+labels: []
+assignees: ""
+---
+
 ## Description
 What needs to be done?
 
