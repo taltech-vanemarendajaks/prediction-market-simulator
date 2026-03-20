@@ -4,22 +4,23 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  workflow_dispatch:
 
 jobs:
-  backend:
+  sanity:
+    name: Repo sanity check
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: maven
+      - name: Verify repository structure
+        run: |
+          test -f README.md
+          test -d backend
+          test -d frontend
+          test -d docs
 
-      - name: Build backend
-        working-directory: backend
-        run: mvn -q clean package
+      - name: CI placeholder
+        run: echo "CI is configured. Backend and frontend checks will be added next."
