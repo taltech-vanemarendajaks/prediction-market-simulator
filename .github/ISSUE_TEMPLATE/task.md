@@ -1,9 +1,17 @@
+---
+name: Task
+about: Create a task
+title: ""
+labels: []
+assignees: ""
+---
+
 ## Description
 What needs to be done?
 
 ## Acceptance Criteria
 - [ ] Task completed
-- [ ] Works as expected
+- [ ] Works end-to-end
 
 ## Estimated time
 e.g. 2h
