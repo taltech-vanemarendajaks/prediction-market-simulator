@@ -13,7 +13,6 @@ logs/
 
 # Environment
 .env
-.env.*
 
 # ========================
 # FRONTEND (Node / React)
