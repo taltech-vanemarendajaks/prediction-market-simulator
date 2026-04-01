@@ -45,3 +45,5 @@ backend/*.log
 # Misc
 # ========================
 coverage/
+
+backend/src/main/resources/application.properties
