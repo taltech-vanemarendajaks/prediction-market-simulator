@@ -13,7 +13,6 @@ logs/
 
 # Environment
 .env
-.env.*
 
 # ========================
 # FRONTEND (Node / React)
@@ -45,3 +44,5 @@ backend/*.log
 # Misc
 # ========================
 coverage/
+
+backend/src/main/resources/application.properties
