@@ -1,24 +1,26 @@
 package com.pms.backend.model;
 
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-/**
- * MarketType - defines the type of market supported by the system.
- *
- * Fields based on architecture diagram:
- *   - ticker:      trading pair symbol (e.g. BTCUSDT)
- *   - api:         external API source identifier (e.g. "bybit")
- *   - enabled:     whether this market type is active
- *   - createDate:  when this market type was registered
- *
- * MVP scope: only BTC 5-minute UP/DOWN market type is active.
- */
+@Entity
+@Table(name = "market_types")
 public class MarketType {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private String ticker;
+
+    @Column(nullable = false)
     private String api;
+
+    @Column(nullable = false)
     private boolean enabled;
+
+    @Column(nullable = false)
     private LocalDateTime createDate;
 
     public MarketType() {}
