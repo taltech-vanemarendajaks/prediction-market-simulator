@@ -52,7 +52,7 @@ public class MarketController {
      *
      * Notes:
      * - Single BTC market only
-     * - Hardcoded response (no DB dependency in this task)
+     * - Uses DB state if market exists, fallback to default otherwise
      * - No multi-market support
      */
     @GetMapping("/markets")
@@ -63,17 +63,34 @@ public class MarketController {
             return ResponseEntity.status(500).body("Failed to fetch BTC price");
         }
 
-        Map<String, Object> btcMarket = Map.of(
-            "id", 1,
-            "title", "BTC 5 Minute UP or DOWN",
-            "pair", bybitApiService.marketPair(),
-            "startingPrice", currentPrice,
-            "startingDate", LocalDateTime.now().toString(),
-            "endingDate", LocalDateTime.now().plusMinutes(5).toString(),
-            "status", "OPEN",
-            "yesProbability", 50.0,
-            "noProbability", 50.0
-        );
+        Optional<Market> marketOptional = marketRepository.findById(1L);
+
+        String title = "BTC 5 Minute UP or DOWN";
+        String startingDate = LocalDateTime.now().toString();
+        String endingDate = LocalDateTime.now().plusMinutes(5).toString();
+        String status = "OPEN";
+        String result = null;
+
+        if (marketOptional.isPresent()) {
+            Market market = marketOptional.get();
+            title = market.getTitle();
+            startingDate = market.getStartingDate().toString();
+            endingDate = market.getEndingDate().toString();
+            status = market.getStatus();
+            result = market.getResult();
+        }
+
+        Map<String, Object> btcMarket = new java.util.LinkedHashMap<>();
+        btcMarket.put("id", 1);
+        btcMarket.put("title", title);
+        btcMarket.put("pair", bybitApiService.marketPair());
+        btcMarket.put("startingPrice", currentPrice);
+        btcMarket.put("startingDate", startingDate);
+        btcMarket.put("endingDate", endingDate);
+        btcMarket.put("status", status);
+        btcMarket.put("result", result);
+        btcMarket.put("yesProbability", 50.0);
+        btcMarket.put("noProbability", 50.0);
 
         return ResponseEntity.ok(List.of(btcMarket));
     }
