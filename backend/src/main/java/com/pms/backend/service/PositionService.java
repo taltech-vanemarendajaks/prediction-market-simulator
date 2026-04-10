@@ -3,6 +3,7 @@ package com.pms.backend.service;
 import com.pms.backend.model.Market;
 import com.pms.backend.model.Position;
 import com.pms.backend.repository.PositionRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -59,6 +60,7 @@ public class PositionService {
      * Resolves all positions instantly at the database level using 2 queries
      * without looping in Java.
      */
+    @Transactional
     public void resolveAllPositionsForMarket(Long marketId, String winningPositionType) {
         String losingPositionType = winningPositionType.equals("UP") ? "DOWN" : "UP";
 
