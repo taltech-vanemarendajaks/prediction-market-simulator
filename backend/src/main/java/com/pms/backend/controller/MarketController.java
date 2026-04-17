@@ -1,10 +1,11 @@
 package com.pms.backend.controller;
 
+import com.pms.backend.dto.MarketOdds;
 import com.pms.backend.model.Market;
 import com.pms.backend.model.Position;
 import com.pms.backend.repository.MarketRepository;
 import com.pms.backend.repository.PositionRepository;
-import com.pms.backend.service.BybitApiService;
+import com.pms.backend.service.OddsService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,80 +18,63 @@ import java.util.Optional;
 @RequestMapping("/api")
 public class MarketController {
 
-    private final BybitApiService bybitApiService;
     private final MarketRepository marketRepository;
     private final PositionRepository positionRepository;
-    private final com.pms.backend.service.PositionService positionService;
+    private final OddsService oddsService;
 
     public MarketController(
-            BybitApiService bybitApiService,
             MarketRepository marketRepository,
             PositionRepository positionRepository,
-            com.pms.backend.service.PositionService positionService
-    ) {
-        this.bybitApiService = bybitApiService;
+            OddsService oddsService) {
         this.marketRepository = marketRepository;
         this.positionRepository = positionRepository;
-        this.positionService = positionService;
+        this.oddsService = oddsService;
     }
 
     /**
      * GET /api/markets
      *
-     * Returns a single BTC prediction market (MVP scope).
+     * Returns the current (latest) BTC prediction market.
+     * Pure read — the scheduler manages market lifecycle.
      *
-     * Stable response contract for frontend integration:
+     * Response contract:
      * - id (Long)
      * - title (String)
      * - pair (String)
      * - startingPrice (Double)
+     * - endingPrice (Double)
      * - startingDate (String ISO)
      * - endingDate (String ISO)
      * - status (String: OPEN/CLOSED)
+     * - result (String: UP/DOWN/null)
      * - yesProbability (Double)
      * - noProbability (Double)
      *
-     * Notes:
-     * - Single BTC market only
-     * - Uses DB state if market exists, fallback to default otherwise
-     * - No multi-market support
+     * Returns 204 No Content if no market has been created yet.
      */
     @GetMapping("/markets")
     public ResponseEntity<?> getMarkets() {
-        Double currentPrice = bybitApiService.marketOrderPrice();
+        Optional<Market> marketOptional = marketRepository.findTopByOrderByIdDesc();
 
-        if (currentPrice == null) {
-            return ResponseEntity.status(500).body("Failed to fetch BTC price");
+        if (marketOptional.isEmpty()) {
+            return ResponseEntity.noContent().build();
         }
 
-        Optional<Market> marketOptional = marketRepository.findById(1L);
-
-        String title = "BTC 5 Minute UP or DOWN";
-        String startingDate = LocalDateTime.now().toString();
-        String endingDate = LocalDateTime.now().plusMinutes(5).toString();
-        String status = "OPEN";
-        String result = null;
-
-        if (marketOptional.isPresent()) {
-            Market market = marketOptional.get();
-            title = market.getTitle();
-            startingDate = market.getStartingDate().toString();
-            endingDate = market.getEndingDate().toString();
-            status = market.getStatus();
-            result = market.getResult();
-        }
+        Market market = marketOptional.get();
+        MarketOdds odds = oddsService.calculateOdds(market.getId());
 
         Map<String, Object> btcMarket = new java.util.LinkedHashMap<>();
-        btcMarket.put("id", 1);
-        btcMarket.put("title", title);
-        btcMarket.put("pair", bybitApiService.marketPair());
-        btcMarket.put("startingPrice", currentPrice);
-        btcMarket.put("startingDate", startingDate);
-        btcMarket.put("endingDate", endingDate);
-        btcMarket.put("status", status);
-        btcMarket.put("result", result);
-        btcMarket.put("yesProbability", 50.0);
-        btcMarket.put("noProbability", 50.0);
+        btcMarket.put("id", market.getId());
+        btcMarket.put("title", market.getTitle());
+        btcMarket.put("pair", "BTCUSDT");
+        btcMarket.put("startingPrice", market.getStartingPrice());
+        btcMarket.put("endingPrice", null);
+        btcMarket.put("startingDate", market.getStartingDate().toString());
+        btcMarket.put("endingDate", market.getEndingDate().toString());
+        btcMarket.put("status", market.getStatus());
+        btcMarket.put("result", null);
+        btcMarket.put("yesProbability", odds.upProbability());
+        btcMarket.put("noProbability", odds.downProbability());
 
         return ResponseEntity.ok(List.of(btcMarket));
     }
@@ -132,13 +116,12 @@ public class MarketController {
         Position savedPosition = positionRepository.save(position);
 
         return ResponseEntity.ok(Map.of(
-            "message", "Position created successfully",
-            "positionId", savedPosition.getId(),
-            "marketId", savedPosition.getMarket().getId(),
-            "userId", savedPosition.getUserId(),
-            "positionType", savedPosition.getPositionType(),
-            "amount", savedPosition.getAmount()
-        ));
+                "message", "Position created successfully",
+                "positionId", savedPosition.getId(),
+                "marketId", savedPosition.getMarket().getId(),
+                "userId", savedPosition.getUserId(),
+                "positionType", savedPosition.getPositionType(),
+                "amount", savedPosition.getAmount()));
     }
 
     public static class CreatePositionRequest {
@@ -181,63 +164,19 @@ public class MarketController {
     }
 
     /**
-     * POST /api/resolve
+     * GET /api/resolve
      *
-     * Resolves a BTC prediction market.
-     *
-     * Input:
-     * - marketId
-     * - result (UP/DOWN)
-     *
-     * Actions:
-     * - updates all positions (WIN/LOSS)
-     * - sets market result
-     * - sets market status to CLOSED
+     * Returns the result of the last (most recently closed) market.
+     * Read-only — no request body, no side effects.
      */
-    @PostMapping("/resolve")
-    public ResponseEntity<?> resolveMarket(@RequestBody ResolveRequest request) {
-
-        if (request.getMarketId() == null || request.getResult() == null) {
-            return ResponseEntity.badRequest().body("marketId and result are required");
-        }
-
-        String result = request.getResult().trim().toUpperCase();
-        if (!result.equals("UP") && !result.equals("DOWN")) {
-            return ResponseEntity.badRequest().body("result must be UP or DOWN");
-        }
-
-        Optional<Market> marketOptional = marketRepository.findById(request.getMarketId());
-        if (marketOptional.isEmpty()) {
-            return ResponseEntity.status(404).body("Market not found");
-        }
-
-        Market market = marketOptional.get();
-
-        // Resolve positions (WIN / LOSS)
-        positionService.resolveAllPositionsForMarket(market.getId(), result);
-
-        // Update market
-        market.setResult(result);
-        market.setStatus("CLOSED");
-
-        marketRepository.save(market);
-
-        return ResponseEntity.ok(Map.of(
-                "message", "Market resolved successfully",
-                "marketId", market.getId(),
-                "result", result,
-                "status", market.getStatus()
-        ));
-    }
-
-    public static class ResolveRequest {
-        private Long marketId;
-        private String result;
-
-        public Long getMarketId() { return marketId; }
-        public void setMarketId(Long marketId) { this.marketId = marketId; }
-
-        public String getResult() { return result; }
-        public void setResult(String result) { this.result = result; }
+    @GetMapping("/resolve")
+    public ResponseEntity<?> getLastMarketResult() {
+        return marketRepository.findTopByStatusOrderByIdDesc("CLOSED")
+                .map(market -> ResponseEntity.ok(Map.of(
+                        "marketId", market.getId(),
+                        "endingPrice", market.getEndingPrice(),
+                        "result", market.getResult() != null ? market.getResult() : "PENDING",
+                        "status", market.getStatus())))
+                .orElse(ResponseEntity.status(404).build());
     }
 }
