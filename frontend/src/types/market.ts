@@ -1,20 +1,21 @@
-export type MarketStatus = "OPEN" | "CLOSED" | "RESOLVED";
+export type MarketStatus = "OPEN" | "CLOSED";
 
-export type PositionSide = "YES" | "NO";
+export type PositionSide = "UP" | "DOWN";
 
 export type Market = {
-  id: string;
+  id: number;
   title: string;
   description: string;
-  probability: number; // 0 to 1
+  probability: number;
   status: MarketStatus;
   startPrice: number;
-  currentPrice: number;
+  endingPrice?: number;
   createdAt: string;
   endsAt: string;
+  result: PositionSide | null;
 };
 
 export type UserPosition = {
-  marketId: string;
+  marketId: number;
   side: PositionSide;
 };

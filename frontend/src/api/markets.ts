@@ -1,19 +1,21 @@
-import type { Market } from "../types/market";
+import type { Market, PositionSide } from "../types/market";
 
 type BackendMarket = {
   id: number;
   title: string;
   pair: string;
   startingPrice: number;
+  currentPrice: number;
   startingDate: string;
   endingDate: string;
-  status: "OPEN" | "CLOSED" | "RESOLVED";
+  status: "OPEN" | "CLOSED";
   yesProbability: number;
   noProbability: number;
+  result: PositionSide | null;
 };
 
 export async function fetchMarkets(): Promise<Market[]> {
-  const response = await fetch("http://localhost:8080/api/markets");
+  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/markets`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch markets");
@@ -21,19 +23,31 @@ export async function fetchMarkets(): Promise<Market[]> {
 
   const data: BackendMarket[] = await response.json();
 
-  return data.map((market) => {
-    const simulatedMove = Math.random() * 200 - 100;
-
-    return {
-      id: String(market.id),
-      title: market.title,
-      description: `Will ${market.pair} price be higher in 5 minutes?`,
-      probability: market.yesProbability / 100,
-      status: market.status,
-      startPrice: market.startingPrice,
-      currentPrice: Number((market.startingPrice + simulatedMove).toFixed(2)),
-      createdAt: market.startingDate,
-      endsAt: market.endingDate,
-    };
-  });
+  return data.map(
+    ({
+      id,
+      title,
+      pair,
+      yesProbability,
+      status,
+      startingDate,
+      startingPrice,
+      currentPrice,
+      endingDate,
+      result,
+    }) => {
+      return {
+        id,
+        title,
+        description: `Will ${pair} price be higher in 5 minutes?`,
+        probability: yesProbability,
+        status,
+        startPrice: startingPrice,
+        currentPrice,
+        createdAt: startingDate,
+        endsAt: endingDate,
+        result,
+      };
+    },
+  );
 }

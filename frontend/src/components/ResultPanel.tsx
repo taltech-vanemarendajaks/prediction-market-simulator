@@ -5,6 +5,10 @@ type ResultPanelProps = {
   selectedPosition: PositionSide | null;
 };
 
+function getDisplayLabel(side: PositionSide): "YES" | "NO" {
+  return side === "UP" ? "YES" : "NO";
+}
+
 export function ResultPanel({ result, selectedPosition }: ResultPanelProps) {
   if (!result) return null;
 
@@ -15,14 +19,14 @@ export function ResultPanel({ result, selectedPosition }: ResultPanelProps) {
       <p className="text-sm text-text-secondary">Result</p>
 
       <p className="mt-2 text-lg font-semibold text-text-primary">
-        Market resolved: {result}
+        Market resolved: {getDisplayLabel(result)}
       </p>
 
       {selectedPosition && (
         <p
           className={`mt-2 text-sm ${userWon ? "text-success" : "text-danger"}`}
         >
-          {userWon ? "You predicted correctly 🎉" : "Your prediction was wrong"}
+          {userWon ? "You predicted correctly" : "Your prediction was wrong"}
         </p>
       )}
     </div>
