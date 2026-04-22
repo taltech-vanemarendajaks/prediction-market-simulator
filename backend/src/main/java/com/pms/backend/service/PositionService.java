@@ -110,4 +110,27 @@ public class PositionService {
         // Query 2: Set all incorrect positions to LOSS
         positionRepository.batchUpdatePositionResults(marketId, losingPositionType, "LOSS");
     }
+
+    @Transactional
+    public void resolveMarketAndProcessPayouts(Long marketId, String winningPositionType) {
+        Market market = marketRepository.findById(marketId)
+                .orElseThrow(() -> new NoSuchElementException("Market not found"));
+
+        if (market.isPayoutProcessed()) {
+            return;
+        }
+
+        resolveAllPositionsForMarket(marketId, winningPositionType);
+
+        List<Position> winningPositions = positionRepository.findByMarketIdAndResult(marketId, "WIN");
+
+        for (Position position : winningPositions) {
+            User user = userRepository.findById(position.getUserId())
+                    .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+            user.setBalance(user.getBalance() + (position.getAmount() * 2));
+        }
+
+        market.setPayoutProcessed(true);
+    }
 }
