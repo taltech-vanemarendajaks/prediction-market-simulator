@@ -1,6 +1,5 @@
 package com.pms.backend.controller;
 
-import com.pms.backend.controller.MarketController.CreatePositionRequest;
 import com.pms.backend.dto.MarketOdds;
 import com.pms.backend.model.Market;
 import com.pms.backend.model.Position;
@@ -139,6 +138,35 @@ public class MarketController {
                 "userId", savedPosition.getUserId(),
                 "positionType", savedPosition.getPositionType(),
                 "amount", savedPosition.getAmount()));
+    }
+
+    /**
+     * GET /api/positions/me
+     * Returns all positions for the authenticated user.
+     */
+    @GetMapping("/positions/me")
+    public ResponseEntity<?> getMyPositions(HttpServletRequest httpRequest) {
+        HttpSession session = httpRequest.getSession(false);
+        if (session == null || session.getAttribute("USER_ID") == null) {
+            return ResponseEntity.status(401).body("Not authenticated");
+        }
+
+        Long authenticatedUserId = (Long) session.getAttribute("USER_ID");
+
+        List<Map<String, Object>> positions = positionRepository
+                .findByUserIdOrderByCreatedAtDesc(authenticatedUserId)
+                .stream()
+                .map(position -> Map.<String, Object>of(
+                        "positionId", position.getId(),
+                        "marketId", position.getMarket().getId(),
+                        "userId", position.getUserId(),
+                        "positionType", position.getPositionType(),
+                        "amount", position.getAmount(),
+                        "createdAt", position.getCreatedAt().toString()
+                ))
+                .toList();
+
+        return ResponseEntity.ok(positions);
     }
 
     public static class CreatePositionRequest {
