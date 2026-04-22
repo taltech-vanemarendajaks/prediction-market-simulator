@@ -156,8 +156,7 @@ public class MarketController {
                 "userId", savedPosition.getUserId(),
                 "positionType", savedPosition.getPositionType(),
                 "amount", savedPosition.getAmount(),
-                "amount", savedPosition.getAmount(),
-                "balance", user.getBalance()));                
+                "balance", user.getBalance()));          
     }
 
     /**
