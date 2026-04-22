@@ -23,7 +23,7 @@ public class SecurityConfig {
                                 "/api/markets",
                                 "/api/resolve"
                         ).permitAll()
-                        .requestMatchers("/api/position").permitAll()
+                        .requestMatchers("/api/position").authenticated()
                         .anyRequest().permitAll()
                 )
                 .formLogin(AbstractHttpConfigurer::disable)
