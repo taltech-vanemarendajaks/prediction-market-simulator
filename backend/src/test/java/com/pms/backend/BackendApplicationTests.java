@@ -136,4 +136,24 @@ class BackendApplicationTests {
                 .andExpect(jsonPath("$[0].positionType").value("UP"))
                 .andExpect(jsonPath("$[0].amount").value(10.0));
     }
+
+    @Test
+    void unauthenticatedUserCannotReadOwnPositions() throws Exception {
+        mockMvc.perform(get("/api/positions/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unauthenticatedUserCannotCreatePosition() throws Exception {
+        mockMvc.perform(post("/api/position")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "marketId": %d,
+                                  "positionType": "UP",
+                                  "amount": 10
+                                }
+                                """.formatted(openMarketId)))
+                .andExpect(status().isForbidden());
+    }
 }
