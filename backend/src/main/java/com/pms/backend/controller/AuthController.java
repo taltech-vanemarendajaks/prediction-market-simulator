@@ -8,6 +8,9 @@ import com.pms.backend.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -48,6 +51,14 @@ public class AuthController {
 
         HttpSession session = httpRequest.getSession(true);
         session.setAttribute("USER_ID", user.getId());
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(user.getEmail(), null, java.util.List.of());
+
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+        session.setAttribute("SPRING_SECURITY_CONTEXT", context);
 
         return ResponseEntity.ok(authService.toResponse(user));
     }
