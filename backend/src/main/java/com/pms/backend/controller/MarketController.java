@@ -1,11 +1,14 @@
 package com.pms.backend.controller;
 
+import com.pms.backend.controller.MarketController.CreatePositionRequest;
 import com.pms.backend.dto.MarketOdds;
 import com.pms.backend.model.Market;
 import com.pms.backend.model.Position;
 import com.pms.backend.repository.MarketRepository;
 import com.pms.backend.repository.PositionRepository;
 import com.pms.backend.service.OddsService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -84,12 +87,20 @@ public class MarketController {
      * Saves a BTC UP/DOWN position.
      */
     @PostMapping("/position")
-    public ResponseEntity<?> createPosition(@RequestBody CreatePositionRequest request) {
+    public ResponseEntity<?> createPosition(
+            @RequestBody CreatePositionRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        HttpSession session = httpRequest.getSession(false);
+        if (session == null || session.getAttribute("USER_ID") == null) {
+            return ResponseEntity.status(401).body("Not authenticated");
+        }
+
+        Long authenticatedUserId = (Long) session.getAttribute("USER_ID");
         if (request.getMarketId() == null ||
-                request.getUserId() == null ||
                 request.getPositionType() == null ||
                 request.getAmount() == null) {
-            return ResponseEntity.badRequest().body("marketId, userId, positionType and amount are required");
+            return ResponseEntity.badRequest().body("marketId, positionType and amount are required");
         }
 
         String positionType = request.getPositionType().trim().toUpperCase();
@@ -113,7 +124,7 @@ public class MarketController {
         }
 
         Position position = new Position();
-        position.setUserId(request.getUserId());
+        position.setUserId(authenticatedUserId);
         position.setMarket(market);
         position.setPositionType(positionType);
         position.setAmount(request.getAmount());
@@ -132,7 +143,6 @@ public class MarketController {
 
     public static class CreatePositionRequest {
         private Long marketId;
-        private Long userId;
         private String positionType;
         private Double amount;
 
@@ -142,14 +152,6 @@ public class MarketController {
 
         public void setMarketId(Long marketId) {
             this.marketId = marketId;
-        }
-
-        public Long getUserId() {
-            return userId;
-        }
-
-        public void setUserId(Long userId) {
-            this.userId = userId;
         }
 
         public String getPositionType() {
