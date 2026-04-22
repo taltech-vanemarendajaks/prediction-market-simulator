@@ -27,6 +27,7 @@ import java.util.Optional;
  *   - Do NOT open a new market (next successful tick will open one)
  */
 @Service
+@org.springframework.context.annotation.Profile("!test")
 public class MarketScheduler {
 
     private final MarketRepository marketRepository;
