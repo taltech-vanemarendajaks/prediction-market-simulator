@@ -10,6 +10,7 @@ import java.util.List;
 
 public interface PositionRepository extends JpaRepository<Position, Long> {
     List<Position> findByMarketId(Long marketId);
+    List<Position> findByMarketIdAndResult(Long marketId, String result);
     List<Position> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     @Modifying
