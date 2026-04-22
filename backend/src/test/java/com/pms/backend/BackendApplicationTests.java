@@ -2,11 +2,12 @@ package com.pms.backend;
 
 import com.pms.backend.model.Market;
 import com.pms.backend.model.MarketType;
+import com.pms.backend.model.User;
 import com.pms.backend.repository.MarketRepository;
 import com.pms.backend.repository.MarketTypeRepository;
 import com.pms.backend.repository.PositionRepository;
 import com.pms.backend.repository.UserRepository;
-
+import com.pms.backend.service.PositionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,6 +45,9 @@ class BackendApplicationTests {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PositionService positionService;
+
     private Long openMarketId;
 
     @BeforeEach
@@ -68,6 +72,7 @@ class BackendApplicationTests {
         market.setEndingDate(LocalDateTime.now().plusMinutes(5));
         market.setStatus("OPEN");
         market.setEndingPrice(50000.0);
+		market.setPayoutProcessed(false);
         market.setMarketType(marketType);
         market = marketRepository.save(market);
 
@@ -163,5 +168,59 @@ class BackendApplicationTests {
                                 }
                                 """.formatted(openMarketId)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void winningPositionGetsPaidOutOnlyOnce() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "winner",
+                                  "email": "winner@test.com",
+                                  "password": "123456"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "winner@test.com",
+                                  "password": "123456"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+
+        mockMvc.perform(post("/api/wallet/claim")
+                        .session(session))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/position")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "marketId": %d,
+                                  "positionType": "UP",
+                                  "amount": 100
+                                }
+                                """.formatted(openMarketId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.balance").value(400.0));
+
+        positionService.resolveMarketAndProcessPayouts(openMarketId, "UP");
+
+        User userAfterFirstPayout = userRepository.findByEmail("winner@test.com").orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(600.0, userAfterFirstPayout.getBalance());
+
+        positionService.resolveMarketAndProcessPayouts(openMarketId, "UP");
+
+        User userAfterSecondPayoutAttempt = userRepository.findByEmail("winner@test.com").orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(600.0, userAfterSecondPayoutAttempt.getBalance());
     }
 }
