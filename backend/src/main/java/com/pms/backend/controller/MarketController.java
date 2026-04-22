@@ -3,8 +3,10 @@ package com.pms.backend.controller;
 import com.pms.backend.dto.MarketOdds;
 import com.pms.backend.model.Market;
 import com.pms.backend.model.Position;
+import com.pms.backend.model.User;
 import com.pms.backend.repository.MarketRepository;
 import com.pms.backend.repository.PositionRepository;
+import com.pms.backend.service.AuthService;
 import com.pms.backend.service.OddsService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -23,14 +25,17 @@ public class MarketController {
     private final MarketRepository marketRepository;
     private final PositionRepository positionRepository;
     private final OddsService oddsService;
+    private final AuthService authService;
 
     public MarketController(
             MarketRepository marketRepository,
             PositionRepository positionRepository,
-            OddsService oddsService) {
+            OddsService oddsService,
+            AuthService authService) {
         this.marketRepository = marketRepository;
         this.positionRepository = positionRepository;
         this.oddsService = oddsService;
+        this.authService = authService;
     }
 
     /**
@@ -96,6 +101,12 @@ public class MarketController {
         }
 
         Long authenticatedUserId = (Long) session.getAttribute("USER_ID");
+        User user = authService.findById(authenticatedUserId);
+
+        if (user == null) {
+            return ResponseEntity.status(404).body("User not found");
+        }        
+
         if (request.getMarketId() == null ||
                 request.getPositionType() == null ||
                 request.getAmount() == null) {
@@ -109,6 +120,10 @@ public class MarketController {
 
         if (request.getAmount() <= 0) {
             return ResponseEntity.badRequest().body("amount must be greater than 0");
+        }
+
+        if (user.getBalance() < request.getAmount()) {
+            return ResponseEntity.badRequest().body("Insufficient balance");
         }
 
         Optional<Market> marketOptional = marketRepository.findById(request.getMarketId());
@@ -129,6 +144,9 @@ public class MarketController {
         position.setAmount(request.getAmount());
         position.setCreatedAt(LocalDateTime.now());
 
+        user.setBalance(user.getBalance() - request.getAmount());
+        authService.save(user);
+
         Position savedPosition = positionRepository.save(position);
 
         return ResponseEntity.ok(Map.of(
@@ -137,7 +155,9 @@ public class MarketController {
                 "marketId", savedPosition.getMarket().getId(),
                 "userId", savedPosition.getUserId(),
                 "positionType", savedPosition.getPositionType(),
-                "amount", savedPosition.getAmount()));
+                "amount", savedPosition.getAmount(),
+                "amount", savedPosition.getAmount(),
+                "balance", user.getBalance()));                
     }
 
     /**
