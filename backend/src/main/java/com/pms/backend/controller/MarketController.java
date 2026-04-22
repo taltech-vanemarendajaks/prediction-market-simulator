@@ -68,11 +68,11 @@ public class MarketController {
         btcMarket.put("title", market.getTitle());
         btcMarket.put("pair", "BTCUSDT");
         btcMarket.put("startingPrice", market.getStartingPrice());
-        btcMarket.put("endingPrice", null);
+        btcMarket.put("endingPrice", market.getEndingPrice());
         btcMarket.put("startingDate", market.getStartingDate().toString());
         btcMarket.put("endingDate", market.getEndingDate().toString());
         btcMarket.put("status", market.getStatus());
-        btcMarket.put("result", null);
+        btcMarket.put("result", market.getResult());
         btcMarket.put("yesProbability", odds.upProbability());
         btcMarket.put("noProbability", odds.downProbability());
 
@@ -106,9 +106,15 @@ public class MarketController {
             return ResponseEntity.status(404).body("Market not found");
         }
 
+        Market market = marketOptional.get();
+
+        if (!"OPEN".equals(market.getStatus())) {
+            return ResponseEntity.badRequest().body("Market is not open");
+        }
+
         Position position = new Position();
         position.setUserId(request.getUserId());
-        position.setMarket(marketOptional.get());
+        position.setMarket(market);
         position.setPositionType(positionType);
         position.setAmount(request.getAmount());
         position.setCreatedAt(LocalDateTime.now());
