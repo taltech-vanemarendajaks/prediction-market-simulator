@@ -93,8 +93,8 @@ public class MarketScheduler {
         market.setStatus("CLOSED");
         marketRepository.save(market);
 
-        // Resolve all positions
-        positionService.resolveAllPositionsForMarket(market.getId(), result);
+        // Resolve all positions and process payouts once
+        positionService.resolveMarketAndProcessPayouts(market.getId(), result);
 
         System.out.println("[MarketScheduler] Closed market #" + market.getId()
                 + " | start=" + market.getStartingPrice()
@@ -129,6 +129,7 @@ public class MarketScheduler {
         market.setEndingDate(endingDate);
         market.setStatus("OPEN");
         market.setResult(null);
+        market.setPayoutProcessed(false);
         market.setMarketType(marketType);
 
         Market saved = marketRepository.save(market);
