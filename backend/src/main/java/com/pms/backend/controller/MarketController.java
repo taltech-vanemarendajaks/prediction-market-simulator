@@ -159,9 +159,13 @@ public class MarketController {
                 .map(position -> Map.<String, Object>of(
                         "positionId", position.getId(),
                         "marketId", position.getMarket().getId(),
+                        "marketTitle", position.getMarket().getTitle(),
+                        "marketStatus", position.getMarket().getStatus(),
+                        "marketResult", position.getMarket().getResult() != null ? position.getMarket().getResult() : "PENDING",                        
                         "userId", position.getUserId(),
                         "positionType", position.getPositionType(),
                         "amount", position.getAmount(),
+                        "positionResult", position.getResult() != null ? position.getResult() : "PENDING",
                         "createdAt", position.getCreatedAt().toString()
                 ))
                 .toList();
