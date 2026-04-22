@@ -19,6 +19,12 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
+    @Column(nullable = false)
+    private Double balance;
+
+    @Column(nullable = false)
+    private boolean starterClaimed;
+
     public User() {
     }
 
@@ -48,5 +54,21 @@ public class User {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public Double getBalance() {
+        return balance;
+    }
+
+    public void setBalance(Double balance) {
+        this.balance = balance;
+    }
+
+    public boolean isStarterClaimed() {
+        return starterClaimed;
+    }
+
+    public void setStarterClaimed(boolean starterClaimed) {
+        this.starterClaimed = starterClaimed;
     }
 }

@@ -72,8 +72,17 @@ public class AuthController {
         }
 
         Long userId = (Long) session.getAttribute("USER_ID");
+        User user = authService.findById(userId);
 
-        return ResponseEntity.ok(Map.of("userId", userId));
+        if (user == null) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "userId", user.getId(),
+                "balance", user.getBalance(),
+                "starterClaimed", user.isStarterClaimed()
+        ));
     }
 
     @PostMapping("/logout")
