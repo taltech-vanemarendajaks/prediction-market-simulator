@@ -111,6 +111,13 @@ class BackendApplicationTests {
 
         MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
 
+        mockMvc.perform(post("/api/wallet/claim")
+                        .session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(2))
+                .andExpect(jsonPath("$.balance").value(500.0))
+                .andExpect(jsonPath("$.starterClaimed").value(true));
+
         mockMvc.perform(post("/api/position")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -126,7 +133,8 @@ class BackendApplicationTests {
                 .andExpect(jsonPath("$.userId").value(2))
                 .andExpect(jsonPath("$.marketId").value(openMarketId))
                 .andExpect(jsonPath("$.positionType").value("UP"))
-                .andExpect(jsonPath("$.amount").value(10.0));
+                .andExpect(jsonPath("$.amount").value(10.0))
+                .andExpect(jsonPath("$.balance").value(490.0));
 
         mockMvc.perform(get("/api/positions/me")
                         .session(session))
