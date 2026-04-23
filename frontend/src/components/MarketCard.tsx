@@ -1,3 +1,4 @@
+import { FaBitcoin } from "react-icons/fa";
 import type { Market } from "../types/market";
 
 type MarketCardProps = {
@@ -8,35 +9,55 @@ export function MarketCard({ market }: MarketCardProps) {
   const noProbability = 100 - market.probability;
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <article className="cursor-pointer rounded-2xl border border-border bg-surface p-6 text-text-primary shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-borderHover hover:bg-surface hover:shadow-md">
       <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900">
-            {market.title}
-          </h3>
-          <p className="mt-2 text-sm text-slate-600">{market.description}</p>
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#F7931A] text-white">
+            <FaBitcoin className="text-3xl" />
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold">{market.title}</h3>
+            <p className="mt-0.5 text-sm text-text-secondary">
+              {market.description}
+            </p>
+          </div>
         </div>
 
         <span
           className={`rounded-full px-3 py-1 text-xs font-semibold ${
             market.status === "OPEN"
-              ? "bg-emerald-100 text-emerald-700"
-              : "bg-slate-200 text-slate-700"
+              ? "bg-success-soft text-success"
+              : "bg-danger-soft text-danger"
           }`}
         >
           {market.status}
         </span>
       </div>
+      <div className="mb-4 grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-bg p-3">
+          <p className="text-xs text-text-secondary">Start Price</p>
+          <p className="mt-1 text-sm font-semibold">
+            ${market.startPrice.toFixed(2)}
+          </p>
+        </div>
 
-      <div className="space-y-3">
+        <div className="rounded-xl bg-bg p-3">
+          <p className="text-xs text-text-secondary">Current Price</p>
+          <p className="mt-1 text-sm font-semibold">
+            ${market.endingPrice.toFixed(2)}
+          </p>
+        </div>
+      </div>
+      <div className="mb-6 space-y-3">
         <div>
           <div className="mb-1 flex items-center justify-between text-sm">
-            <span className="font-medium text-emerald-700">YES</span>
-            <span className="text-slate-700">{market.probability}%</span>
+            <span className="font-medium text-success">YES</span>
+            <span className="text-text-secondary">{market.probability}%</span>
           </div>
-          <div className="h-2 rounded-full bg-slate-100">
+          <div className="h-2 rounded-full bg-surface-hover">
             <div
-              className="h-2 rounded-full bg-emerald-500"
+              className="h-2 rounded-full bg-success"
               style={{ width: `${market.probability}%` }}
             />
           </div>
@@ -44,31 +65,16 @@ export function MarketCard({ market }: MarketCardProps) {
 
         <div>
           <div className="mb-1 flex items-center justify-between text-sm">
-            <span className="font-medium text-rose-700">NO</span>
-            <span className="text-slate-700">{noProbability}%</span>
+            <span className="font-medium text-danger">NO</span>
+            <span className="text-text-secondary">{noProbability}%</span>
           </div>
-          <div className="h-2 rounded-full bg-slate-100">
+          <div className="h-2 rounded-full bg-surface-hover">
             <div
-              className="h-2 rounded-full bg-rose-500"
+              className="h-2 rounded-full bg-danger"
               style={{ width: `${noProbability}%` }}
             />
           </div>
         </div>
-      </div>
-
-      <div className="mt-6 flex gap-3">
-        <button
-          type="button"
-          className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-        >
-          Buy YES
-        </button>
-        <button
-          type="button"
-          className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
-        >
-          Buy NO
-        </button>
       </div>
     </article>
   );

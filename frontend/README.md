@@ -17,7 +17,7 @@ npm install
 Create a `.env` file in the `frontend/` directory:
 
 ```env
-VITE_API_BASE_URL=http://localhost:8080
+VITE_API_BASE_URL=http://localhost:8080/api
 ```
 
 > Backend is expected to run on port 8080.
@@ -53,7 +53,7 @@ src/
 Frontend expects backend endpoint:
 
 ```
-GET /markets
+GET /api/markets
 ```
 
 Base URL is configured via:
@@ -65,7 +65,7 @@ import.meta.env.VITE_API_BASE_URL
 Example:
 
 ```
-http://localhost:8080/markets
+http://localhost:8080/api/markets
 ```
 
 ---
@@ -97,16 +97,20 @@ npm run build
 
 ## 📌 Status
 
-Frontend initial setup complete:
+📌 Status
 
-- ✅ Local dev working
-- ✅ Tailwind configured
-- ✅ Markets page implemented
-- ✅ API layer ready for integration
+Frontend MVP currently includes:
+
+✅ Local dev working
+✅ Tailwind configured
+✅ Markets list → detail flow implemented
+✅ Backend market data integration via /api/markets
+✅ Backend-aligned market state (OPEN/CLOSED, UP/DOWN)
 
 ---
 
 ## 🧑‍💻 Development Notes
 
 - Backend is implemented in Spring Boot
-- Expected next step: connect `/markets` endpoint
+- Current API contract is driven by backend market state
+- Next step: finalize real position submit flow and auth/session integration
