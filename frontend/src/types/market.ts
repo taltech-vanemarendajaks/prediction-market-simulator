@@ -9,7 +9,7 @@ export type Market = {
   probability: number;
   status: MarketStatus;
   startPrice: number;
-  endingPrice?: number;
+  endingPrice: number;
   createdAt: string;
   endsAt: string;
   result: PositionSide | null;

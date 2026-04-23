@@ -4,6 +4,7 @@ import { CountdownTimer } from "../components/CountdownTimer";
 import { PositionForm } from "../components/PositionForm";
 import { ResultPanel } from "../components/ResultPanel";
 import { FaBitcoin } from "react-icons/fa";
+import { submitPosition } from "../api/position";
 
 type Props = {
   market: Market;
@@ -17,6 +18,30 @@ export function MarketDetailPage({ market }: Props) {
   const [selectedPosition, setSelectedPosition] = useState<PositionSide | null>(
     null,
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  async function handleSelect(side: PositionSide) {
+    setSubmitError(null);
+
+    try {
+      setIsSubmitting(true);
+
+      await submitPosition({
+        marketId: market.id,
+        positionType: side,
+        amount: 10,
+      });
+
+      setSelectedPosition(side);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "Failed to submit position",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <section className="min-h-screen bg-bg py-10 text-text-primary">
@@ -61,7 +86,7 @@ export function MarketDetailPage({ market }: Props) {
             <div className="rounded-xl bg-bg p-4">
               <p className="text-sm text-text-secondary">Current Price</p>
               <p className="mt-1 text-lg font-semibold">
-                ${(market.endingPrice ?? market.startPrice).toFixed(2)}
+                ${market.endingPrice.toFixed(2)}
               </p>
             </div>
 
@@ -79,16 +104,21 @@ export function MarketDetailPage({ market }: Props) {
 
           <PositionForm
             selectedPosition={selectedPosition}
-            onSelect={setSelectedPosition}
-            disabled={market.status !== "OPEN"}
+            onSelect={handleSelect}
+            disabled={market.status !== "OPEN" || isSubmitting}
           />
 
-          <p className="mt-3 text-xs text-text-secondary/70">
-            Position selection is currently UI-only in the MVP and is not yet
-            submitted to the backend.
-          </p>
+          {isSubmitting && (
+            <p className="mt-3 text-xs text-text-secondary/70">
+              Submitting position...
+            </p>
+          )}
 
-          {selectedPosition && (
+          {submitError && (
+            <p className="mt-3 text-sm text-danger">{submitError}</p>
+          )}
+
+          {selectedPosition && !submitError && (
             <p className="mt-2 text-sm text-text-secondary">
               Selected position: {getDisplayLabel(selectedPosition)}
             </p>

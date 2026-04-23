@@ -45,7 +45,7 @@ export function MarketCard({ market }: MarketCardProps) {
         <div className="rounded-xl bg-bg p-3">
           <p className="text-xs text-text-secondary">Current Price</p>
           <p className="mt-1 text-sm font-semibold">
-            ${(market.endingPrice ?? market.startPrice).toFixed(2)}
+            ${market.endingPrice.toFixed(2)}
           </p>
         </div>
       </div>
