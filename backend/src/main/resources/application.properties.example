@@ -15,3 +15,9 @@ spring.sql.init.mode=always
 # Bybit API
 bybit.api.key=your_bybit_api_key
 bybit.api.secret=your_bybit_api_secret
+
+# Ensure data.sql runs AFTER Hibernate creates tables (needed for initial seed data)
+spring.jpa.defer-datasource-initialization=true
+
+# Always run SQL initialization scripts (data.sql) on startup
+spring.sql.init.mode=always

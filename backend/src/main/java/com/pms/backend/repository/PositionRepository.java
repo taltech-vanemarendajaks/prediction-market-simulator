@@ -10,6 +10,7 @@ import java.util.List;
 
 public interface PositionRepository extends JpaRepository<Position, Long> {
     List<Position> findByMarketId(Long marketId);
+    List<Position> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     @Modifying
     @Query("UPDATE Position p SET p.result = :result WHERE p.market.id = :marketId AND p.positionType = :positionType")
