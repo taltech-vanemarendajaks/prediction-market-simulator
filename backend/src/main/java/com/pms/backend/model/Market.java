@@ -35,6 +35,9 @@ public class Market {
     @Column(nullable = false)
     private Double endingPrice;
 
+    @Column(nullable = false)
+    private boolean payoutProcessed;
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "market_type_id", nullable = false)
     private MarketType marketType;
@@ -108,6 +111,14 @@ public class Market {
 
     public void setEndingPrice(Double endingPrice) {
         this.endingPrice = endingPrice;
+    }
+
+    public boolean isPayoutProcessed() {
+        return payoutProcessed;
+    }
+
+    public void setPayoutProcessed(boolean payoutProcessed) {
+        this.payoutProcessed = payoutProcessed;
     }
 
     public MarketType getMarketType() {

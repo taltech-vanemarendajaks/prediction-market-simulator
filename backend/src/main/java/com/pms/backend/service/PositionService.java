@@ -2,21 +2,33 @@ package com.pms.backend.service;
 
 import com.pms.backend.model.Market;
 import com.pms.backend.model.Position;
+import com.pms.backend.model.User;
+import com.pms.backend.repository.MarketRepository;
 import com.pms.backend.repository.PositionRepository;
+import com.pms.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
 public class PositionService {
 
     private final PositionRepository positionRepository;
+    private final UserRepository userRepository;
+    private final MarketRepository marketRepository;
 
-    public PositionService(PositionRepository positionRepository) {
+    public PositionService(
+            PositionRepository positionRepository,
+            UserRepository userRepository,
+            MarketRepository marketRepository
+    ) {
         this.positionRepository = positionRepository;
+        this.userRepository = userRepository;
+        this.marketRepository = marketRepository;        
     }
 
     /**
@@ -33,6 +45,34 @@ public class PositionService {
         }
 
         return positionRepository.save(positionDetails);
+    }
+
+    @Transactional
+    public Position createPositionForUser(Long userId, Long marketId, String positionType, Double amount) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        Market market = marketRepository.findById(marketId)
+                .orElseThrow(() -> new NoSuchElementException("Market not found"));
+
+        if (!"OPEN".equals(market.getStatus())) {
+            throw new IllegalStateException("Market is not open");
+        }
+
+        if (user.getBalance() < amount) {
+            throw new IllegalArgumentException("Insufficient balance");
+        }
+
+        user.setBalance(user.getBalance() - amount);
+
+        Position position = new Position();
+        position.setUserId(userId);
+        position.setMarket(market);
+        position.setPositionType(positionType);
+        position.setAmount(amount);
+        position.setCreatedAt(LocalDateTime.now());
+
+        return positionRepository.save(position);
     }
 
     /**
@@ -69,5 +109,28 @@ public class PositionService {
 
         // Query 2: Set all incorrect positions to LOSS
         positionRepository.batchUpdatePositionResults(marketId, losingPositionType, "LOSS");
+    }
+
+    @Transactional
+    public void resolveMarketAndProcessPayouts(Long marketId, String winningPositionType) {
+        Market market = marketRepository.findById(marketId)
+                .orElseThrow(() -> new NoSuchElementException("Market not found"));
+
+        if (market.isPayoutProcessed()) {
+            return;
+        }
+
+        resolveAllPositionsForMarket(marketId, winningPositionType);
+
+        List<Position> winningPositions = positionRepository.findByMarketIdAndResult(marketId, "WIN");
+
+        for (Position position : winningPositions) {
+            User user = userRepository.findById(position.getUserId())
+                    .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+            user.setBalance(user.getBalance() + (position.getAmount() * 2));
+        }
+
+        market.setPayoutProcessed(true);
     }
 }

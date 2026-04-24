@@ -35,6 +35,8 @@ public class AuthService {
         user.setName(request.getName().trim());
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setBalance(0.0);
+        user.setStarterClaimed(false);
 
         User savedUser = userRepository.save(user);
 
@@ -47,6 +49,14 @@ public class AuthService {
 
     public User findByEmail(String email) {
         return userRepository.findByEmail(email.trim().toLowerCase()).orElse(null);
+    }
+
+    public User findById(Long userId) {
+        return userRepository.findById(userId).orElse(null);
+    }
+
+    public User save(User user) {
+        return userRepository.save(user);
     }
 
     public boolean passwordMatches(String rawPassword, String passwordHash) {

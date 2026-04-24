@@ -3,17 +3,20 @@ package com.pms.backend.controller;
 import com.pms.backend.dto.MarketOdds;
 import com.pms.backend.model.Market;
 import com.pms.backend.model.Position;
+import com.pms.backend.model.User;
 import com.pms.backend.repository.MarketRepository;
 import com.pms.backend.repository.PositionRepository;
+import com.pms.backend.service.AuthService;
 import com.pms.backend.service.OddsService;
+import com.pms.backend.service.PositionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @RestController
@@ -23,14 +26,20 @@ public class MarketController {
     private final MarketRepository marketRepository;
     private final PositionRepository positionRepository;
     private final OddsService oddsService;
+    private final AuthService authService;
+    private final PositionService positionService;
 
     public MarketController(
             MarketRepository marketRepository,
             PositionRepository positionRepository,
-            OddsService oddsService) {
+            OddsService oddsService,
+            AuthService authService,
+            PositionService positionService) {
         this.marketRepository = marketRepository;
         this.positionRepository = positionRepository;
         this.oddsService = oddsService;
+        this.authService = authService;
+        this.positionService = positionService;
     }
 
     /**
@@ -96,6 +105,12 @@ public class MarketController {
         }
 
         Long authenticatedUserId = (Long) session.getAttribute("USER_ID");
+        User user = authService.findById(authenticatedUserId);
+
+        if (user == null) {
+            return ResponseEntity.status(404).body("User not found");
+        }        
+
         if (request.getMarketId() == null ||
                 request.getPositionType() == null ||
                 request.getAmount() == null) {
@@ -122,14 +137,21 @@ public class MarketController {
             return ResponseEntity.badRequest().body("Market is not open");
         }
 
-        Position position = new Position();
-        position.setUserId(authenticatedUserId);
-        position.setMarket(market);
-        position.setPositionType(positionType);
-        position.setAmount(request.getAmount());
-        position.setCreatedAt(LocalDateTime.now());
+        Position savedPosition;
+        try {
+            savedPosition = positionService.createPositionForUser(
+                    authenticatedUserId,
+                    request.getMarketId(),
+                    positionType,
+                    request.getAmount()
+            );
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
 
-        Position savedPosition = positionRepository.save(position);
+        User updatedUser = authService.findById(authenticatedUserId);
 
         return ResponseEntity.ok(Map.of(
                 "message", "Position created successfully",
@@ -137,7 +159,8 @@ public class MarketController {
                 "marketId", savedPosition.getMarket().getId(),
                 "userId", savedPosition.getUserId(),
                 "positionType", savedPosition.getPositionType(),
-                "amount", savedPosition.getAmount()));
+                "amount", savedPosition.getAmount(),
+                "balance", updatedUser.getBalance()));   
     }
 
     /**
