@@ -77,12 +77,18 @@ public class MarketScheduler {
      */
     @Scheduled(fixedRate = 3000)
     public void updateOpenMarketPrice() {
-        Optional<Market> openMarket = marketRepository.findByStatus("OPEN");
+        System.out.println("[MarketScheduler] Live price update job running...");
+
+        Optional<Market> openMarket = marketRepository.findTopByStatusOrderByIdDesc("OPEN");
+        System.out.println("[MarketScheduler] OPEN market found: " + openMarket.isPresent());
+
         if (openMarket.isEmpty()) {
             return;
         }
 
         Double currentPrice = bybitApiService.marketOrderPrice();
+        System.out.println("[MarketScheduler] Live Bybit price: " + currentPrice);
+
         if (currentPrice == null) {
             System.err.println("[MarketScheduler] Bybit API down — skipping live price update.");
             return;
@@ -90,11 +96,14 @@ public class MarketScheduler {
 
         Market market = openMarket.get();
         market.setEndingPrice(currentPrice);
-        marketRepository.save(market);
+        Market saved = marketRepository.save(market);
+
+        System.out.println("[MarketScheduler] Updated market #" + saved.getId()
+                + " endingPrice=" + saved.getEndingPrice());
     }
 
     private void closeCurrentMarket() {
-        Optional<Market> openMarket = marketRepository.findByStatus("OPEN");
+        Optional<Market> openMarket = marketRepository.findTopByStatusOrderByIdDesc("OPEN");
         if (openMarket.isEmpty()) {
             System.out.println("[MarketScheduler] No OPEN market to close.");
             return;
