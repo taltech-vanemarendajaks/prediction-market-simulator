@@ -13,20 +13,25 @@ export function AuthPanel({ onAuthenticated }: Props) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    setSuccessMessage(null);
 
     try {
       setLoading(true);
 
-      const user =
-        mode === "login"
-          ? await login({ email, password })
-          : await register({ name, email, password });
+      if (mode === "login") {
+        const user = await login({ email, password });
+        onAuthenticated(user);
+        return;
+      }
 
-      onAuthenticated(user);
+      await register({ name, email, password });
+      setSuccessMessage("Account created. Please log in.");
+      setMode("login");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
@@ -76,6 +81,9 @@ export function AuthPanel({ onAuthenticated }: Props) {
         </div>
 
         {error && <p className="text-sm text-danger">{error}</p>}
+        {successMessage && (
+          <p className="text-sm text-success">{successMessage}</p>
+        )}
 
         <button
           type="submit"
@@ -90,6 +98,7 @@ export function AuthPanel({ onAuthenticated }: Props) {
         type="button"
         onClick={() => {
           setError(null);
+          setSuccessMessage(null);
           setMode(mode === "login" ? "register" : "login");
         }}
         className="mt-4 cursor-pointer text-sm text-text-secondary hover:underline"
