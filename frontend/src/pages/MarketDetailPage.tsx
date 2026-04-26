@@ -14,6 +14,7 @@ type Props = {
   onPositionSubmitted?: () => void;
   user: AuthUser | null;
   onAuthenticated: (user: AuthUser) => void;
+  onUserUpdated: (user: AuthUser) => void;
 };
 
 function getDisplayLabel(side: PositionSide): "YES" | "NO" {
@@ -26,6 +27,7 @@ export function MarketDetailPage({
   onPositionSubmitted,
   user,
   onAuthenticated,
+  onUserUpdated,
 }: Props) {
   const [selectedPosition, setSelectedPosition] = useState<PositionSide | null>(
     null,
@@ -45,10 +47,16 @@ export function MarketDetailPage({
     try {
       setIsSubmitting(true);
 
-      await submitPosition({
+      const result = await submitPosition({
         marketId: market.id,
+        userId: user.id,
         positionType: side,
         amount: 10,
+      });
+
+      onUserUpdated({
+        ...user,
+        balance: result.balance,
       });
 
       setSelectedPosition(side);
