@@ -3,16 +3,34 @@ import type { PositionSide } from "../types/market";
 type Props = {
   selectedPosition: PositionSide | null;
   onSelect: (side: PositionSide) => void;
+  amount: number;
+  onAmountChange: (value: number) => void;  
   disabled?: boolean;
 };
 
 export function PositionForm({
   selectedPosition,
   onSelect,
+  amount,
+  onAmountChange,  
   disabled = false,
 }: Props) {
   return (
-    <div className="mt-6 flex gap-3">
+    <div className="mt-6 space-y-4">
+      <div>
+        <label className="text-sm text-text-secondary">Amount</label>
+        <input
+          type="number"
+          min={1}
+          step={1}
+          value={amount}
+          onChange={(event) => onAmountChange(Number(event.target.value))}
+          disabled={disabled}
+          className="mt-1 w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm outline-none focus:border-borderHover disabled:cursor-not-allowed disabled:opacity-50"
+        />
+      </div>
+
+      <div className="flex gap-3">
       <button
         type="button"
         onClick={() => onSelect("UP")}
@@ -54,6 +72,7 @@ export function PositionForm({
       >
         NO
       </button>
+      </div>
     </div>
   );
 }

@@ -29,6 +29,7 @@ export function MarketDetailPage({
   onAuthenticated,
   onUserUpdated,
 }: Props) {
+  const [amount, setAmount] = useState(10);
   const [selectedPosition, setSelectedPosition] = useState<PositionSide | null>(
     null,
   );
@@ -44,6 +45,11 @@ export function MarketDetailPage({
       return;
     }
 
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setSubmitError("Amount must be greater than 0");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -51,7 +57,7 @@ export function MarketDetailPage({
         marketId: market.id,
         userId: user.id,
         positionType: side,
-        amount: 10,
+        amount,
       });
 
       onUserUpdated({
@@ -135,6 +141,8 @@ export function MarketDetailPage({
           <PositionForm
             selectedPosition={selectedPosition}
             onSelect={handleSelect}
+            amount={amount}
+            onAmountChange={setAmount}            
             disabled={market.status !== "OPEN" || isSubmitting}
           />
 
