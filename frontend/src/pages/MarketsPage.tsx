@@ -54,7 +54,7 @@ export function MarketsPage({ user, onAuthenticated }: Props) {
 
     const interval = window.setInterval(() => {
       loadMarkets();
-    }, 1000);
+    }, 3000);
 
     return () => window.clearInterval(interval);
   }, []);
