@@ -3,32 +3,60 @@ import { fetchMarkets } from "../api/markets";
 import type { Market } from "../types/market";
 import { MarketCard } from "../components/MarketCard";
 import { MarketDetailPage } from "./MarketDetailPage";
+import { MyPositions } from "../components/MyPositions";
+import type { AuthUser } from "../api/auth";
 
-export function MarketsPage() {
+type Props = {
+  user: AuthUser | null;
+  onAuthenticated: (user: AuthUser) => void;
+};
+
+export function MarketsPage({ user, onAuthenticated }: Props) {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
+  const [positionsRefreshKey, setPositionsRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadMarkets() {
-      try {
-        const data = await fetchMarkets();
+  function refreshPositions() {
+    setPositionsRefreshKey((current) => current + 1);
+  }
 
-        if (!data || data.length === 0) {
-          throw new Error("No market found");
-        }
+  async function loadMarkets() {
+    try {
+      setError(null);
 
-        setMarkets(data);
-      } catch (err) {
-        setError("Failed to load markets");
-        console.error(err);
-      } finally {
-        setLoading(false);
+      const data = await fetchMarkets();
+
+      if (!data || data.length === 0) {
+        throw new Error("No market found");
       }
-    }
 
+      setMarkets(data);
+
+      setSelectedMarket((currentSelectedMarket) => {
+        if (!currentSelectedMarket) return null;
+
+        const updated = data.find((m) => m.id === currentSelectedMarket.id);
+
+        return updated ?? data[0];
+      });
+    } catch (err) {
+      setError("Failed to load markets");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
     loadMarkets();
+
+    const interval = window.setInterval(() => {
+      loadMarkets();
+    }, 3000);
+
+    return () => window.clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -43,13 +71,20 @@ export function MarketsPage() {
     return (
       <div>
         <button
+          type="button"
           onClick={() => setSelectedMarket(null)}
-          className="cursor-pointer mb-4 text-sm text-text-secondary hover:underline"
+          className="mb-4 cursor-pointer text-sm text-text-secondary hover:underline"
         >
           ← Back
         </button>
 
-        <MarketDetailPage market={selectedMarket} />
+        <MarketDetailPage
+          market={selectedMarket}
+          onMarketExpired={loadMarkets}
+          onPositionSubmitted={refreshPositions}
+          user={user}
+          onAuthenticated={onAuthenticated}
+        />
       </div>
     );
   }
@@ -60,11 +95,17 @@ export function MarketsPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {markets.map((market) => (
-          <div key={market.id} onClick={() => setSelectedMarket(market)}>
+          <div
+            key={market.id}
+            onClick={() => setSelectedMarket(market)}
+            className="cursor-pointer"
+          >
             <MarketCard market={market} />
           </div>
         ))}
       </div>
+
+      {user && <MyPositions refreshKey={positionsRefreshKey} />}
     </section>
   );
 }
