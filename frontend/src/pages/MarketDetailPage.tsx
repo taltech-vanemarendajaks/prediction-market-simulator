@@ -21,6 +21,10 @@ function getDisplayLabel(side: PositionSide): "YES" | "NO" {
   return side === "UP" ? "YES" : "NO";
 }
 
+function getAmountColorClass(side: PositionSide): string {
+  return side === "UP" ? "text-success" : "text-danger";
+}
+
 export function MarketDetailPage({
   market,
   onMarketExpired,
@@ -167,7 +171,10 @@ export function MarketDetailPage({
 
           {selectedPosition && !submitError && (
             <p className="mt-2 text-sm text-text-secondary">
-              Selected position: {getDisplayLabel(selectedPosition)}
+              Selected position:{" "}
+              <span className={getAmountColorClass(selectedPosition)}>
+                {getDisplayLabel(selectedPosition)} ${amount}
+              </span>
             </p>
           )}
 
