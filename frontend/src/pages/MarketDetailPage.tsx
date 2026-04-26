@@ -5,24 +5,42 @@ import { PositionForm } from "../components/PositionForm";
 import { ResultPanel } from "../components/ResultPanel";
 import { FaBitcoin } from "react-icons/fa";
 import { submitPosition } from "../api/position";
+import type { AuthUser } from "../api/auth";
+import { AuthModal } from "../components/AuthModal";
 
 type Props = {
   market: Market;
+  onMarketExpired?: () => void;
+  onPositionSubmitted?: () => void;
+  user: AuthUser | null;
+  onAuthenticated: (user: AuthUser) => void;
 };
 
 function getDisplayLabel(side: PositionSide): "YES" | "NO" {
   return side === "UP" ? "YES" : "NO";
 }
 
-export function MarketDetailPage({ market }: Props) {
+export function MarketDetailPage({
+  market,
+  onMarketExpired,
+  onPositionSubmitted,
+  user,
+  onAuthenticated,
+}: Props) {
   const [selectedPosition, setSelectedPosition] = useState<PositionSide | null>(
     null,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showAuth, setShowAuth] = useState(false);
 
   async function handleSelect(side: PositionSide) {
     setSubmitError(null);
+
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -34,6 +52,7 @@ export function MarketDetailPage({ market }: Props) {
       });
 
       setSelectedPosition(side);
+      onPositionSubmitted?.();
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : "Failed to submit position",
@@ -94,7 +113,10 @@ export function MarketDetailPage({ market }: Props) {
               <p className="text-sm text-text-secondary">Time Left</p>
               <p className="mt-1 text-lg font-semibold">
                 {market.status === "OPEN" ? (
-                  <CountdownTimer endsAt={market.endsAt} />
+                  <CountdownTimer
+                    endsAt={market.endsAt}
+                    onComplete={onMarketExpired}
+                  />
                 ) : (
                   "00:00"
                 )}
@@ -108,6 +130,15 @@ export function MarketDetailPage({ market }: Props) {
             disabled={market.status !== "OPEN" || isSubmitting}
           />
 
+          {showAuth && (
+            <AuthModal
+              onAuthenticated={(user) => {
+                onAuthenticated(user);
+                setShowAuth(false);
+              }}
+              onClose={() => setShowAuth(false)}
+            />
+          )}
           {isSubmitting && (
             <p className="mt-3 text-xs text-text-secondary/70">
               Submitting position...
