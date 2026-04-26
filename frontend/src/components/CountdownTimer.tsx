@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 
 type Props = {
   endsAt: string;
+  onComplete?: () => void;
 };
 
-export function CountdownTimer({ endsAt }: Props) {
+export function CountdownTimer({ endsAt, onComplete }: Props) {
   const calculateTimeLeft = () => {
     // eslint-disable-next-line react-hooks/purity
     const diff = new Date(endsAt).getTime() - Date.now();
@@ -25,12 +26,21 @@ export function CountdownTimer({ endsAt }: Props) {
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
+    let completed = false;
+
+    const interval = window.setInterval(() => {
+      const nextTimeLeft = calculateTimeLeft();
+
+      setTimeLeft(nextTimeLeft);
+
+      if (nextTimeLeft === "00:00" && !completed) {
+        completed = true;
+        onComplete?.();
+      }
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [endsAt]);
+    return () => window.clearInterval(interval);
+  }, [endsAt, onComplete]);
 
   return <span>{timeLeft}</span>;
 }
