@@ -9,9 +9,14 @@ import type { AuthUser } from "../api/auth";
 type Props = {
   user: AuthUser | null;
   onAuthenticated: (user: AuthUser) => void;
+  onUserUpdated: (user: AuthUser) => void;
 };
 
-export function MarketsPage({ user, onAuthenticated }: Props) {
+export function MarketsPage({
+  user,
+  onAuthenticated,
+  onUserUpdated,
+}: Props) {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const [positionsRefreshKey, setPositionsRefreshKey] = useState(0);
@@ -84,6 +89,7 @@ export function MarketsPage({ user, onAuthenticated }: Props) {
           onPositionSubmitted={refreshPositions}
           user={user}
           onAuthenticated={onAuthenticated}
+          onUserUpdated={onUserUpdated}
         />
       </div>
     );
