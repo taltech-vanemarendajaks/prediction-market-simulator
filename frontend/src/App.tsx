@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { MarketsPage } from "./pages/MarketsPage";
 import { fetchMe, logout, type AuthUser } from "./api/auth";
-import { AuthPanel } from "./components/AuthPanel";
+import { AuthModal } from "./components/AuthModal";
 
 function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -82,24 +82,13 @@ function App() {
         <MarketsPage user={user} onAuthenticated={setUser} />
       </div>
       {showAuth && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-2xl bg-surface p-6">
-            <AuthPanel
-              onAuthenticated={(user) => {
-                setUser(user);
-                setShowAuth(false);
-              }}
-            />
-
-            <button
-              type="button"
-              onClick={() => setShowAuth(false)}
-              className="mt-4 text-sm text-text-secondary hover:underline"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <AuthModal
+          onAuthenticated={(user) => {
+            setUser(user);
+            setShowAuth(false);
+          }}
+          onClose={() => setShowAuth(false)}
+        />
       )}
     </main>
   );
