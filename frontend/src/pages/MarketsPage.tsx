@@ -9,9 +9,14 @@ import type { AuthUser } from "../api/auth";
 type Props = {
   user: AuthUser | null;
   onAuthenticated: (user: AuthUser) => void;
+  onUserUpdated: (user: AuthUser) => void;
 };
 
-export function MarketsPage({ user, onAuthenticated }: Props) {
+export function MarketsPage({
+  user,
+  onAuthenticated,
+  onUserUpdated,
+}: Props) {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const [positionsRefreshKey, setPositionsRefreshKey] = useState(0);
@@ -39,7 +44,11 @@ export function MarketsPage({ user, onAuthenticated }: Props) {
 
         const updated = data.find((m) => m.id === currentSelectedMarket.id);
 
-        return updated ?? data[0];
+        if (updated) {
+          return updated;
+        }
+
+        return currentSelectedMarket;
       });
     } catch (err) {
       setError("Failed to load markets");
@@ -68,6 +77,8 @@ export function MarketsPage({ user, onAuthenticated }: Props) {
   }
 
   if (selectedMarket) {
+    const liveMarket = markets[0] ?? null;
+
     return (
       <div>
         <button
@@ -84,6 +95,13 @@ export function MarketsPage({ user, onAuthenticated }: Props) {
           onPositionSubmitted={refreshPositions}
           user={user}
           onAuthenticated={onAuthenticated}
+          onUserUpdated={onUserUpdated}
+          liveMarket={liveMarket}
+          onGoToLiveMarket={() => {
+            if (liveMarket) {
+              setSelectedMarket(liveMarket);
+            }
+          }}          
         />
       </div>
     );

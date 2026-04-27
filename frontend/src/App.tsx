@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { MarketsPage } from "./pages/MarketsPage";
 import { fetchMe, logout, type AuthUser } from "./api/auth";
 import { AuthModal } from "./components/AuthModal";
+import { WalletPanel } from "./components/WalletPanel";
 
 function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -18,6 +19,8 @@ function App() {
             id: me.userId,
             name: "",
             email: "",
+            balance: me.balance,
+            starterClaimed: me.starterClaimed,            
           });
         }
       } catch (error) {
@@ -29,6 +32,35 @@ function App() {
 
     checkSession();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = window.setInterval(async () => {
+      try {
+        const me = await fetchMe();
+
+        if (!me) {
+          setUser(null);
+          return;
+        }
+
+        setUser((currentUser) => {
+          if (!currentUser) return null;
+
+          return {
+            ...currentUser,
+            balance: me.balance,
+            starterClaimed: me.starterClaimed,
+          };
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }, 3000);
+
+    return () => window.clearInterval(interval);
+  }, [user]);
 
   async function handleLogout() {
     try {
@@ -79,7 +111,13 @@ function App() {
           )}
         </header>
 
-        <MarketsPage user={user} onAuthenticated={setUser} />
+        {user && <WalletPanel user={user} onUserUpdated={setUser} />}
+
+        <MarketsPage
+          user={user}
+          onAuthenticated={setUser}
+          onUserUpdated={setUser}
+        />
       </div>
       {showAuth && (
         <AuthModal

@@ -2,10 +2,14 @@ export type AuthUser = {
   id: number;
   name: string;
   email: string;
+  balance: number;
+  starterClaimed: boolean;  
 };
 
 export type MeResponse = {
   userId: number;
+  balance: number;
+  starterClaimed: boolean;  
   name?: string;
   email?: string;
 };
@@ -33,7 +37,13 @@ export async function register(payload: RegisterPayload): Promise<AuthUser> {
 
   if (!response.ok) throw new Error(await response.text());
 
-  return response.json();
+  const user = await response.json();
+
+  return {
+    ...user,
+    balance: 0,
+    starterClaimed: false,
+  };
 }
 
 export async function login(payload: LoginPayload): Promise<AuthUser> {
@@ -46,7 +56,14 @@ export async function login(payload: LoginPayload): Promise<AuthUser> {
 
   if (!response.ok) throw new Error(await response.text());
 
-  return response.json();
+  const user = await response.json();
+  const me = await fetchMe();
+
+  return {
+    ...user,
+    balance: me?.balance ?? 0,
+    starterClaimed: me?.starterClaimed ?? false,
+  };
 }
 
 export async function fetchMe(): Promise<MeResponse | null> {

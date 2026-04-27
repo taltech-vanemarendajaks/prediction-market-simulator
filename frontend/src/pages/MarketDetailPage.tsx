@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Market, PositionSide } from "../types/market";
 import { CountdownTimer } from "../components/CountdownTimer";
 import { PositionForm } from "../components/PositionForm";
 import { ResultPanel } from "../components/ResultPanel";
 import { FaBitcoin } from "react-icons/fa";
 import { submitPosition } from "../api/position";
+import { fetchMarketById } from "../api/markets";
 import type { AuthUser } from "../api/auth";
 import { AuthModal } from "../components/AuthModal";
 
@@ -14,10 +15,36 @@ type Props = {
   onPositionSubmitted?: () => void;
   user: AuthUser | null;
   onAuthenticated: (user: AuthUser) => void;
+  onUserUpdated: (user: AuthUser) => void;
+  liveMarket: Market | null;
+  onGoToLiveMarket: () => void;  
 };
 
 function getDisplayLabel(side: PositionSide): "YES" | "NO" {
   return side === "UP" ? "YES" : "NO";
+}
+
+function getAmountColorClass(side: PositionSide): string {
+  return side === "UP" ? "text-success" : "text-danger";
+}
+
+function buildSmoothPath(points: string[]): string {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0]}`;
+
+  return points.reduce((path, point, index) => {
+    if (index === 0) return `M ${point}`;
+
+    const [previousX, previousY] = points[index - 1].split(",").map(Number);
+    const [currentX, currentY] = point.split(",").map(Number);
+    const midX = (previousX + currentX) / 2;
+
+    return `${path} C ${midX},${previousY} ${midX},${currentY} ${currentX},${currentY}`;
+  }, "");
+}
+
+function clampChartY(value: number): number {
+  return Math.min(100, Math.max(0, value));
 }
 
 export function MarketDetailPage({
@@ -26,14 +53,68 @@ export function MarketDetailPage({
   onPositionSubmitted,
   user,
   onAuthenticated,
+  onUserUpdated,
+  liveMarket,
+  onGoToLiveMarket,  
 }: Props) {
+  const [amount, setAmount] = useState(10);
   const [selectedPosition, setSelectedPosition] = useState<PositionSide | null>(
     null,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
+  const [priceHistory, setPriceHistory] = useState<number[]>([]);
+  const [marketState, setMarketState] = useState(market);
 
+  useEffect(() => {
+    setMarketState(market);
+  }, [market]);
+
+  useEffect(() => {    
+    setPriceHistory((current) => {
+      const next = [...current, marketState.endingPrice];
+      return next.slice(-30);
+    });
+  }, [marketState.endingPrice]);
+
+  useEffect(() => {
+    const interval = window.setInterval(async () => {
+      try {
+        const updatedMarket = await fetchMarketById(market.id);
+        setMarketState(updatedMarket);
+      } catch (error) {
+        console.error(error);
+      }
+    }, 3000);
+
+    return () => window.clearInterval(interval);
+  }, [market.id]);
+
+  const minPrice = Math.min(...priceHistory);
+  const maxPrice = Math.max(...priceHistory);
+  const priceRange = maxPrice - minPrice || 1;
+
+  const chartPoints = priceHistory
+    .map((price, index) => {
+      const x =
+        priceHistory.length === 1
+          ? 0
+          : (index / (priceHistory.length - 1)) * 100;
+      const y = clampChartY(100 - ((price - minPrice) / priceRange) * 100);
+
+      return `${x},${y}`;
+    });
+
+  const chartPath = buildSmoothPath(chartPoints);
+  const areaPath =
+    chartPoints.length > 1
+      ? `${chartPath} L 100,100 L 0,100 Z`
+      : "";
+  const currentPoint = chartPoints.at(-1);
+  const [currentX, currentY] = currentPoint
+    ? currentPoint.split(",").map(Number)
+    : [0, 0];
   async function handleSelect(side: PositionSide) {
     setSubmitError(null);
 
@@ -42,13 +123,24 @@ export function MarketDetailPage({
       return;
     }
 
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setSubmitError("Amount must be greater than 0");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
-      await submitPosition({
+      const result = await submitPosition({
         marketId: market.id,
+        userId: user.id,
         positionType: side,
-        amount: 10,
+        amount,
+      });
+
+      onUserUpdated({
+        ...user,
+        balance: result.balance,
       });
 
       setSelectedPosition(side);
@@ -74,23 +166,23 @@ export function MarketDetailPage({
 
               <div>
                 <h1 className="text-2xl font-bold leading-tight">
-                  {market.title}
+                  {marketState.title}
                 </h1>
 
                 <p className="mt-0.5 text-sm text-text-secondary/80">
-                  {market.description}
+                  {marketState.description}
                 </p>
               </div>
             </div>
 
             <span
               className={`rounded-full px-3 py-1 text-sm font-semibold ${
-                market.status === "OPEN"
+                marketState.status === "OPEN"
                   ? "bg-success-soft text-success"
                   : "bg-danger-soft text-danger"
               }`}
             >
-              {market.status}
+              {marketState.status}
             </span>
           </div>
 
@@ -98,23 +190,23 @@ export function MarketDetailPage({
             <div className="rounded-xl bg-bg p-4">
               <p className="text-sm text-text-secondary">Start Price</p>
               <p className="mt-1 text-lg font-semibold">
-                ${market.startPrice.toFixed(2)}
+                ${marketState.startPrice.toFixed(2)}
               </p>
             </div>
 
             <div className="rounded-xl bg-bg p-4">
               <p className="text-sm text-text-secondary">Current Price</p>
               <p className="mt-1 text-lg font-semibold">
-                ${market.endingPrice.toFixed(2)}
+                ${marketState.endingPrice.toFixed(2)}
               </p>
             </div>
 
             <div className="rounded-xl bg-bg p-4">
               <p className="text-sm text-text-secondary">Time Left</p>
               <p className="mt-1 text-lg font-semibold">
-                {market.status === "OPEN" ? (
+                {marketState.status === "OPEN" ? (
                   <CountdownTimer
-                    endsAt={market.endsAt}
+                    endsAt={marketState.endsAt}
                     onComplete={onMarketExpired}
                   />
                 ) : (
@@ -124,10 +216,79 @@ export function MarketDetailPage({
             </div>
           </div>
 
+          {priceHistory.length > 1 && (
+            <div className="mt-6 rounded-xl border border-border bg-bg p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-semibold text-text-primary">
+                  Live Price
+                </p>
+                <p className="text-xs text-text-secondary">
+                  Last {priceHistory.length} updates
+                </p>
+              </div>
+
+              <svg
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+                className="h-44 w-full overflow-hidden"
+              >
+                <defs>
+                  <linearGradient id="priceArea" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="currentColor" stopOpacity="0.18" />
+                    <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+
+                {[20, 50, 80].map((lineY) => (
+                  <line
+                    key={lineY}
+                    x1="0"
+                    x2="100"
+                    y1={lineY}
+                    y2={lineY}
+                    stroke="currentColor"
+                    strokeWidth="0.35"
+                    className="text-border"
+                  />
+                ))}
+
+                <path
+                  d={areaPath}
+                  fill="url(#priceArea)"
+                  className="text-success"
+                />
+
+                <path
+                  d={chartPath}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeWidth="1.8"
+                  className="text-success"
+                />
+
+                <circle
+                  cx={currentX}
+                  cy={currentY}
+                  r="1.6"
+                  fill="currentColor"
+                  className="text-success"
+                />
+              </svg>
+
+              <div className="mt-2 flex justify-between text-xs text-text-secondary">
+                <span>${minPrice.toFixed(2)}</span>
+                <span>${maxPrice.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+
           <PositionForm
-            selectedPosition={selectedPosition}
+            selectedPosition={selectedPosition}         
             onSelect={handleSelect}
-            disabled={market.status !== "OPEN" || isSubmitting}
+            amount={amount}
+            onAmountChange={setAmount}            
+            disabled={marketState.status !== "OPEN" || isSubmitting}
           />
 
           {showAuth && (
@@ -151,13 +312,25 @@ export function MarketDetailPage({
 
           {selectedPosition && !submitError && (
             <p className="mt-2 text-sm text-text-secondary">
-              Selected position: {getDisplayLabel(selectedPosition)}
+              Selected position:{" "}
+              <span className={getAmountColorClass(selectedPosition)}>
+                {getDisplayLabel(selectedPosition)} ${amount}
+              </span>
             </p>
           )}
 
           <ResultPanel
-            result={market.result}
+            result={marketState.result}
             selectedPosition={selectedPosition}
+            finalPrice={marketState.endingPrice}
+            marketTitle={marketState.title}
+            showGoToLiveMarket={
+              marketState.status === "CLOSED" &&
+              !!liveMarket &&
+              liveMarket.id !== marketState.id &&
+              liveMarket.status === "OPEN"
+            }
+            onGoToLiveMarket={onGoToLiveMarket}            
           />
         </div>
       </div>

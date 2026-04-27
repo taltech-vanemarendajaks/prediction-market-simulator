@@ -68,8 +68,42 @@ public class MarketScheduler {
         openNewMarket();
     }
 
+
+    /**
+     * Updates the current OPEN market price while the market is still active.
+     *
+     * This keeps frontend "Current Price" live because FE polling can only show
+     * updated values if the backend updates endingPrice before market close.
+     */
+    @Scheduled(fixedRate = 3000)
+    public void updateOpenMarketPrice() {
+        System.out.println("[MarketScheduler] Live price update job running...");
+
+        Optional<Market> openMarket = marketRepository.findTopByStatusOrderByIdDesc("OPEN");
+        System.out.println("[MarketScheduler] OPEN market found: " + openMarket.isPresent());
+
+        if (openMarket.isEmpty()) {
+            return;
+        }
+
+        Double currentPrice = bybitApiService.marketOrderPrice();
+        System.out.println("[MarketScheduler] Live Bybit price: " + currentPrice);
+
+        if (currentPrice == null) {
+            System.err.println("[MarketScheduler] Bybit API down — skipping live price update.");
+            return;
+        }
+
+        Market market = openMarket.get();
+        market.setEndingPrice(currentPrice);
+        Market saved = marketRepository.save(market);
+
+        System.out.println("[MarketScheduler] Updated market #" + saved.getId()
+                + " endingPrice=" + saved.getEndingPrice());
+    }
+
     private void closeCurrentMarket() {
-        Optional<Market> openMarket = marketRepository.findByStatus("OPEN");
+        Optional<Market> openMarket = marketRepository.findTopByStatusOrderByIdDesc("OPEN");
         if (openMarket.isEmpty()) {
             System.out.println("[MarketScheduler] No OPEN market to close.");
             return;
