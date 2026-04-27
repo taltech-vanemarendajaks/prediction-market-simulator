@@ -19,7 +19,7 @@ export function AuthModal({ onAuthenticated, onClose }: Props) {
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-full p-1 text-text-secondary transition hover:bg-bg hover:text-text-primary"
+          className="cursor-pointer absolute right-2 top-1 rounded-full p-1 text-text-secondary transition hover:bg-bg hover:text-text-primary"
         >
           ✕
         </button>
