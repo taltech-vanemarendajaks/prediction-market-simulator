@@ -5,6 +5,28 @@ type Props = {
   onAuthenticated: (user: AuthUser) => void;
 };
 
+type FieldErrors = {
+  name?: string;
+  email?: string;
+  password?: string;
+  form?: string;
+};
+
+const PASSWORD_ERROR =
+  "Password must be at least 8 characters and include one uppercase letter and one symbol.";
+
+function isValidPassword(password: string) {
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export function AuthPanel({ onAuthenticated }: Props) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
@@ -12,13 +34,37 @@ export function AuthPanel({ onAuthenticated }: Props) {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setError(null);
+
+    setErrors({});
     setSuccessMessage(null);
+
+    const newErrors: FieldErrors = {};
+
+    if (mode === "register" && !name.trim()) {
+      newErrors.name = "Name is required.";
+    }
+
+    if (!email.trim()) {
+      newErrors.email = "Email is required.";
+    } else if (!isValidEmail(email)) {
+      newErrors.email = "Please enter a valid email address.";
+    }
+
+    if (!password) {
+      newErrors.password = "Password is required.";
+    } else if (mode === "register" && !isValidPassword(password)) {
+      newErrors.password = PASSWORD_ERROR;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -35,7 +81,9 @@ export function AuthPanel({ onAuthenticated }: Props) {
       setName("");
       setPassword("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
+      setErrors({
+        form: err instanceof Error ? err.message : "Authentication failed",
+      });
     } finally {
       setLoading(false);
     }
@@ -49,28 +97,42 @@ export function AuthPanel({ onAuthenticated }: Props) {
           : "Create an account to start trading"}
       </h3>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
         {mode === "register" && (
           <div>
             <label className="text-sm text-text-secondary">Name</label>
             <input
+              type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text-primary outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
-              required
+              className={`mt-1 w-full rounded-xl border bg-bg px-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none transition focus:ring-1 ${
+                errors.name
+                  ? "border-danger focus:border-danger focus:ring-danger/30"
+                  : "border-border focus:border-blue-500 focus:ring-blue-500/30"
+              }`}
             />
+            {errors.name && (
+              <p className="mt-1 text-xs text-danger">{errors.name}</p>
+            )}
           </div>
         )}
 
         <div>
           <label className="text-sm text-text-secondary">Email</label>
           <input
-            type="email"
+            type="text"
+            inputMode="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="mt-1 w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text-primary outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
-            required
+            className={`mt-1 w-full rounded-xl border bg-bg px-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none transition focus:ring-1 ${
+              errors.email
+                ? "border-danger focus:border-danger focus:ring-danger/30"
+                : "border-border focus:border-blue-500 focus:ring-blue-500/30"
+            }`}
           />
+          {errors.email && (
+            <p className="mt-1 text-xs text-danger">{errors.email}</p>
+          )}
         </div>
 
         <div>
@@ -79,12 +141,24 @@ export function AuthPanel({ onAuthenticated }: Props) {
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="mt-1 w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm text-text-primary outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
-            required
+            className={`mt-1 w-full rounded-xl border bg-bg px-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none transition focus:ring-1 ${
+              errors.password
+                ? "border-danger focus:border-danger focus:ring-danger/30"
+                : "border-border focus:border-blue-500 focus:ring-blue-500/30"
+            }`}
           />
+
+          {mode === "register" && !errors.password && (
+            <p className="mt-1 text-xs text-text-secondary">{PASSWORD_ERROR}</p>
+          )}
+
+          {errors.password && (
+            <p className="mt-1 text-xs text-danger">{errors.password}</p>
+          )}
         </div>
 
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {errors.form && <p className="text-sm text-danger">{errors.form}</p>}
+
         {successMessage && (
           <p className="text-sm text-green-500">{successMessage}</p>
         )}
@@ -113,7 +187,7 @@ export function AuthPanel({ onAuthenticated }: Props) {
       <button
         type="button"
         onClick={() => {
-          setError(null);
+          setErrors({});
           setSuccessMessage(null);
           setMode(mode === "login" ? "register" : "login");
         }}
@@ -127,7 +201,7 @@ export function AuthPanel({ onAuthenticated }: Props) {
         ) : (
           <>
             Already have an account?{" "}
-            <span className="font-semibold text-blue-400">Login</span>
+            <span className="font-semibold text-blue-400">Log in</span>
           </>
         )}
       </button>
