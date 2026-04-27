@@ -90,6 +90,33 @@ public class MarketController {
         return ResponseEntity.ok(List.of(btcMarket));
     }
 
+    @GetMapping("/markets/{id}")
+    public ResponseEntity<?> getMarketById(@PathVariable Long id) {
+        Optional<Market> marketOptional = marketRepository.findById(id);
+
+        if (marketOptional.isEmpty()) {
+            return ResponseEntity.status(404).body("Market not found");
+        }
+
+        Market market = marketOptional.get();
+        MarketOdds odds = oddsService.calculateOdds(market.getId());
+
+        Map<String, Object> btcMarket = new java.util.LinkedHashMap<>();
+        btcMarket.put("id", market.getId());
+        btcMarket.put("title", market.getTitle());
+        btcMarket.put("pair", "BTCUSDT");
+        btcMarket.put("startingPrice", market.getStartingPrice());
+        btcMarket.put("endingPrice", market.getEndingPrice());
+        btcMarket.put("startingDate", market.getStartingDate().toString());
+        btcMarket.put("endingDate", market.getEndingDate().toString());
+        btcMarket.put("status", market.getStatus());
+        btcMarket.put("result", market.getResult());
+        btcMarket.put("yesProbability", odds.upProbability());
+        btcMarket.put("noProbability", odds.downProbability());
+
+        return ResponseEntity.ok(btcMarket);
+    }
+
     /**
      * POST /api/position
      * Saves a BTC UP/DOWN position.
