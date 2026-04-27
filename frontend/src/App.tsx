@@ -33,6 +33,35 @@ function App() {
     checkSession();
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = window.setInterval(async () => {
+      try {
+        const me = await fetchMe();
+
+        if (!me) {
+          setUser(null);
+          return;
+        }
+
+        setUser((currentUser) => {
+          if (!currentUser) return null;
+
+          return {
+            ...currentUser,
+            balance: me.balance,
+            starterClaimed: me.starterClaimed,
+          };
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }, 3000);
+
+    return () => window.clearInterval(interval);
+  }, [user]);
+
   async function handleLogout() {
     try {
       await logout();
