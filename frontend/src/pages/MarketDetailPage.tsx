@@ -5,6 +5,7 @@ import { PositionForm } from "../components/PositionForm";
 import { ResultPanel } from "../components/ResultPanel";
 import { FaBitcoin } from "react-icons/fa";
 import { submitPosition } from "../api/position";
+import { fetchMarketById } from "../api/markets";
 import type { AuthUser } from "../api/auth";
 import { AuthModal } from "../components/AuthModal";
 
@@ -64,13 +65,31 @@ export function MarketDetailPage({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [priceHistory, setPriceHistory] = useState<number[]>([]);
+  const [marketState, setMarketState] = useState(market);
 
   useEffect(() => {
+    setMarketState(market);
+  }, [market]);
+
+  useEffect(() => {    
     setPriceHistory((current) => {
-      const next = [...current, market.endingPrice];
+      const next = [...current, marketState.endingPrice];
       return next.slice(-30);
     });
-  }, [market.endingPrice]);
+  }, [marketState.endingPrice]);
+
+  useEffect(() => {
+    const interval = window.setInterval(async () => {
+      try {
+        const updatedMarket = await fetchMarketById(market.id);
+        setMarketState(updatedMarket);
+      } catch (error) {
+        console.error(error);
+      }
+    }, 3000);
+
+    return () => window.clearInterval(interval);
+  }, [market.id]);
 
   const minPrice = Math.min(...priceHistory);
   const maxPrice = Math.max(...priceHistory);
@@ -147,23 +166,23 @@ export function MarketDetailPage({
 
               <div>
                 <h1 className="text-2xl font-bold leading-tight">
-                  {market.title}
+                  {marketState.title}
                 </h1>
 
                 <p className="mt-0.5 text-sm text-text-secondary/80">
-                  {market.description}
+                  {marketState.description}
                 </p>
               </div>
             </div>
 
             <span
               className={`rounded-full px-3 py-1 text-sm font-semibold ${
-                market.status === "OPEN"
+                marketState.status === "OPEN"
                   ? "bg-success-soft text-success"
                   : "bg-danger-soft text-danger"
               }`}
             >
-              {market.status}
+              {marketState.status}
             </span>
           </div>
 
@@ -171,23 +190,23 @@ export function MarketDetailPage({
             <div className="rounded-xl bg-bg p-4">
               <p className="text-sm text-text-secondary">Start Price</p>
               <p className="mt-1 text-lg font-semibold">
-                ${market.startPrice.toFixed(2)}
+                ${marketState.startPrice.toFixed(2)}
               </p>
             </div>
 
             <div className="rounded-xl bg-bg p-4">
               <p className="text-sm text-text-secondary">Current Price</p>
               <p className="mt-1 text-lg font-semibold">
-                ${market.endingPrice.toFixed(2)}
+                ${marketState.endingPrice.toFixed(2)}
               </p>
             </div>
 
             <div className="rounded-xl bg-bg p-4">
               <p className="text-sm text-text-secondary">Time Left</p>
               <p className="mt-1 text-lg font-semibold">
-                {market.status === "OPEN" ? (
+                {marketState.status === "OPEN" ? (
                   <CountdownTimer
-                    endsAt={market.endsAt}
+                    endsAt={marketState.endsAt}
                     onComplete={onMarketExpired}
                   />
                 ) : (
@@ -269,7 +288,7 @@ export function MarketDetailPage({
             onSelect={handleSelect}
             amount={amount}
             onAmountChange={setAmount}            
-            disabled={market.status !== "OPEN" || isSubmitting}
+            disabled={marketState.status !== "OPEN" || isSubmitting}
           />
 
           {showAuth && (
@@ -301,14 +320,14 @@ export function MarketDetailPage({
           )}
 
           <ResultPanel
-            result={market.result}
+            result={marketState.result}
             selectedPosition={selectedPosition}
-            finalPrice={market.endingPrice}
-            marketTitle={market.title}
+            finalPrice={marketState.endingPrice}
+            marketTitle={marketState.title}
             showGoToLiveMarket={
-              market.status === "CLOSED" &&
+              marketState.status === "CLOSED" &&
               !!liveMarket &&
-              liveMarket.id !== market.id &&
+              liveMarket.id !== marketState.id &&
               liveMarket.status === "OPEN"
             }
             onGoToLiveMarket={onGoToLiveMarket}            
