@@ -72,9 +72,9 @@ function App() {
             <button
               type="button"
               onClick={() => setShowAuth(true)}
-              className="cursor-pointer rounded-xl border border-border px-4 py-2 text-sm text-text-secondary hover:bg-surface"
+              className="cursor-pointer rounded-xl border border-border px-4 py-2 text-sm text-blue-400 hover:bg-surface"
             >
-              Login
+              Log In
             </button>
           )}
         </header>
