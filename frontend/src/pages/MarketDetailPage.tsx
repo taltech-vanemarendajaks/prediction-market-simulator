@@ -15,6 +15,8 @@ type Props = {
   user: AuthUser | null;
   onAuthenticated: (user: AuthUser) => void;
   onUserUpdated: (user: AuthUser) => void;
+  liveMarket: Market | null;
+  onGoToLiveMarket: () => void;  
 };
 
 function getDisplayLabel(side: PositionSide): "YES" | "NO" {
@@ -51,6 +53,8 @@ export function MarketDetailPage({
   user,
   onAuthenticated,
   onUserUpdated,
+  liveMarket,
+  onGoToLiveMarket,  
 }: Props) {
   const [amount, setAmount] = useState(10);
   const [selectedPosition, setSelectedPosition] = useState<PositionSide | null>(
@@ -81,7 +85,7 @@ export function MarketDetailPage({
       const y = clampChartY(100 - ((price - minPrice) / priceRange) * 100);
 
       return `${x},${y}`;
-    })
+    });
 
   const chartPath = buildSmoothPath(chartPoints);
   const areaPath =
@@ -261,7 +265,7 @@ export function MarketDetailPage({
           )}
 
           <PositionForm
-            selectedPosition={selectedPosition}
+            selectedPosition={selectedPosition}         
             onSelect={handleSelect}
             amount={amount}
             onAmountChange={setAmount}            
@@ -299,6 +303,15 @@ export function MarketDetailPage({
           <ResultPanel
             result={market.result}
             selectedPosition={selectedPosition}
+            finalPrice={market.endingPrice}
+            marketTitle={market.title}
+            showGoToLiveMarket={
+              market.status === "CLOSED" &&
+              !!liveMarket &&
+              liveMarket.id !== market.id &&
+              liveMarket.status === "OPEN"
+            }
+            onGoToLiveMarket={onGoToLiveMarket}            
           />
         </div>
       </div>
