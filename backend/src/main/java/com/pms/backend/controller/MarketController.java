@@ -7,6 +7,7 @@ import com.pms.backend.model.User;
 import com.pms.backend.repository.MarketRepository;
 import com.pms.backend.repository.PositionRepository;
 import com.pms.backend.service.AuthService;
+import com.pms.backend.service.BybitApiService;
 import com.pms.backend.service.OddsService;
 import com.pms.backend.service.PositionService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,40 +29,37 @@ public class MarketController {
     private final OddsService oddsService;
     private final AuthService authService;
     private final PositionService positionService;
+    private final BybitApiService bybitApiService;
 
     public MarketController(
             MarketRepository marketRepository,
             PositionRepository positionRepository,
             OddsService oddsService,
             AuthService authService,
-            PositionService positionService) {
+            PositionService positionService,
+            BybitApiService bybitApiService
+    ) {
         this.marketRepository = marketRepository;
         this.positionRepository = positionRepository;
         this.oddsService = oddsService;
         this.authService = authService;
         this.positionService = positionService;
+        this.bybitApiService = bybitApiService;
     }
 
     /**
      * GET /api/markets
      *
-     * Returns the current (latest) BTC prediction market.
-     * Pure read — the scheduler manages market lifecycle.
+     * Returns the current latest BTC prediction market.
+     * Scheduler manages market lifecycle.
      *
-     * Response contract:
-     * - id (Long)
-     * - title (String)
-     * - pair (String)
-     * - startingPrice (Double)
-     * - endingPrice (Double)
-     * - startingDate (String ISO)
-     * - endingDate (String ISO)
-     * - status (String: OPEN/CLOSED)
-     * - result (String: UP/DOWN/null)
-     * - yesProbability (Double)
-     * - noProbability (Double)
+     * OPEN market:
+     * - startingPrice comes from DB
+     * - currentPrice comes live from Bybit
+     * - endingPrice stays unchanged until market closes
      *
-     * Returns 204 No Content if no market has been created yet.
+     * CLOSED market:
+     * - currentPrice falls back to endingPrice
      */
     @GetMapping("/markets")
     public ResponseEntity<?> getMarkets() {
@@ -74,11 +72,22 @@ public class MarketController {
         Market market = marketOptional.get();
         MarketOdds odds = oddsService.calculateOdds(market.getId());
 
+        Double currentPrice = market.getEndingPrice();
+
+        if ("OPEN".equals(market.getStatus())) {
+            Double livePrice = bybitApiService.marketOrderPrice();
+
+            if (livePrice != null) {
+                currentPrice = livePrice;
+            }
+        }
+
         Map<String, Object> btcMarket = new java.util.LinkedHashMap<>();
         btcMarket.put("id", market.getId());
         btcMarket.put("title", market.getTitle());
-        btcMarket.put("pair", "BTCUSDT");
+        btcMarket.put("pair", bybitApiService.marketPair());
         btcMarket.put("startingPrice", market.getStartingPrice());
+        btcMarket.put("currentPrice", currentPrice);
         btcMarket.put("endingPrice", market.getEndingPrice());
         btcMarket.put("startingDate", market.getStartingDate().toString());
         btcMarket.put("endingDate", market.getEndingDate().toString());
@@ -109,7 +118,7 @@ public class MarketController {
 
         if (user == null) {
             return ResponseEntity.status(404).body("User not found");
-        }        
+        }
 
         if (request.getMarketId() == null ||
                 request.getPositionType() == null ||
@@ -160,7 +169,8 @@ public class MarketController {
                 "userId", savedPosition.getUserId(),
                 "positionType", savedPosition.getPositionType(),
                 "amount", savedPosition.getAmount(),
-                "balance", updatedUser.getBalance()));   
+                "balance", updatedUser.getBalance()
+        ));
     }
 
     /**
@@ -184,16 +194,38 @@ public class MarketController {
                         "marketId", position.getMarket().getId(),
                         "marketTitle", position.getMarket().getTitle(),
                         "marketStatus", position.getMarket().getStatus(),
-                        "marketResult", position.getMarket().getResult() != null ? position.getMarket().getResult() : "PENDING",                        
+                        "marketResult", position.getMarket().getResult() != null
+                                ? position.getMarket().getResult()
+                                : "PENDING",
                         "userId", position.getUserId(),
                         "positionType", position.getPositionType(),
                         "amount", position.getAmount(),
-                        "positionResult", position.getResult() != null ? position.getResult() : "PENDING",
+                        "positionResult", position.getResult() != null
+                                ? position.getResult()
+                                : "PENDING",
                         "createdAt", position.getCreatedAt().toString()
                 ))
                 .toList();
 
         return ResponseEntity.ok(positions);
+    }
+
+    /**
+     * GET /api/resolve
+     *
+     * Returns the result of the last most recently closed market.
+     * Read-only — no request body, no side effects.
+     */
+    @GetMapping("/resolve")
+    public ResponseEntity<?> getLastMarketResult() {
+        return marketRepository.findTopByStatusOrderByIdDesc("CLOSED")
+                .map(market -> ResponseEntity.ok(Map.of(
+                        "marketId", market.getId(),
+                        "endingPrice", market.getEndingPrice(),
+                        "result", market.getResult() != null ? market.getResult() : "PENDING",
+                        "status", market.getStatus()
+                )))
+                .orElse(ResponseEntity.status(404).build());
     }
 
     public static class CreatePositionRequest {
@@ -224,22 +256,5 @@ public class MarketController {
         public void setAmount(Double amount) {
             this.amount = amount;
         }
-    }
-
-    /**
-     * GET /api/resolve
-     *
-     * Returns the result of the last (most recently closed) market.
-     * Read-only — no request body, no side effects.
-     */
-    @GetMapping("/resolve")
-    public ResponseEntity<?> getLastMarketResult() {
-        return marketRepository.findTopByStatusOrderByIdDesc("CLOSED")
-                .map(market -> ResponseEntity.ok(Map.of(
-                        "marketId", market.getId(),
-                        "endingPrice", market.getEndingPrice(),
-                        "result", market.getResult() != null ? market.getResult() : "PENDING",
-                        "status", market.getStatus())))
-                .orElse(ResponseEntity.status(404).build());
     }
 }
