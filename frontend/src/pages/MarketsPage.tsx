@@ -44,7 +44,11 @@ export function MarketsPage({
 
         const updated = data.find((m) => m.id === currentSelectedMarket.id);
 
-        return updated ?? data[0];
+        if (updated) {
+          return updated;
+        }
+
+        return currentSelectedMarket;
       });
     } catch (err) {
       setError("Failed to load markets");
@@ -73,6 +77,8 @@ export function MarketsPage({
   }
 
   if (selectedMarket) {
+    const liveMarket = markets[0] ?? null;
+
     return (
       <div>
         <button
@@ -90,6 +96,12 @@ export function MarketsPage({
           user={user}
           onAuthenticated={onAuthenticated}
           onUserUpdated={onUserUpdated}
+          liveMarket={liveMarket}
+          onGoToLiveMarket={() => {
+            if (liveMarket) {
+              setSelectedMarket(liveMarket);
+            }
+          }}          
         />
       </div>
     );
