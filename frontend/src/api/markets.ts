@@ -7,6 +7,7 @@ type BackendMarket = {
   startingPrice: number;
   endingPrice: number;
   startingDate: string;
+  currentPrice: number;
   endingDate: string;
   status: "OPEN" | "CLOSED";
   yesProbability: number;
@@ -33,6 +34,7 @@ export async function fetchMarkets(): Promise<Market[]> {
       startingDate,
       startingPrice,
       endingPrice,
+      currentPrice,
       endingDate,
       result,
     }) => {
@@ -44,6 +46,7 @@ export async function fetchMarkets(): Promise<Market[]> {
         status,
         startPrice: startingPrice,
         endingPrice,
+        currentPrice,
         createdAt: startingDate,
         endsAt: endingDate,
         result,

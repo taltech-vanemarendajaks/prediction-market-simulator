@@ -62,6 +62,11 @@ export function MarketDetailPage({
     }
   }
 
+  const displayPrice =
+    market.status === "OPEN" ? market.currentPrice : market.endingPrice;
+
+  const priceLabel = market.status === "OPEN" ? "Current Price" : "Final Price";
+
   return (
     <section className="min-h-screen bg-bg py-10 text-text-primary">
       <div className="mx-auto max-w-3xl px-4">
@@ -103,9 +108,9 @@ export function MarketDetailPage({
             </div>
 
             <div className="rounded-xl bg-bg p-4">
-              <p className="text-sm text-text-secondary">Current Price</p>
+              <p className="text-sm text-text-secondary">{priceLabel}</p>
               <p className="mt-1 text-lg font-semibold">
-                ${market.endingPrice.toFixed(2)}
+                ${displayPrice.toFixed(2)}
               </p>
             </div>
 
